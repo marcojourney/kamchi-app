@@ -1,0 +1,643 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated lender/owner account settings, currency defaults, capital balance, and optional in-app PIN hash.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "lenderPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "lenderLogoDataUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "preferredLang": {
+          "type": "string",
+          "enum": ["en", "km"]
+        },
+        "defaultCurrency": {
+          "type": "string",
+          "enum": ["USD", "KHR"]
+        },
+        "exchangeRateKhr": {
+          "type": "number"
+        },
+        "capitalCashUsd": {
+          "type": "number"
+        },
+        "capitalCashKhr": {
+          "type": "number"
+        },
+        "useKhmerNumerals": {
+          "type": "boolean"
+        },
+        "pinHash": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "biometricEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "preferredLang", "defaultCurrency", "exchangeRateKhr", "createdAt", "updatedAt"]
+    },
+    "Borrower": {
+      "title": "Borrower",
+      "description": "Borrower profile including contact details, guarantor, notes, tags, ID photo, and computed reliability score.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "nationalIdNumber": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "idPhotoDataUrl": {
+          "type": "string",
+          "maxLength": 250000
+        },
+        "borrowerPhotoDataUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "guarantorName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "guarantorPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "guarantorPhotoDataUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "tags": {
+          "type": "array",
+          "description": "Up to 10 tags"
+        },
+        "riskScore": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "name", "phone", "createdAt", "updatedAt"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "Loan contract with principal, interest rules, schedule parameters, collateral, signature, and live balances.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "KHR"]
+        },
+        "principal": {
+          "type": "number"
+        },
+        "interestRate": {
+          "type": "number"
+        },
+        "interestType": {
+          "type": "string",
+          "enum": ["flat", "reducing", "interest_only"]
+        },
+        "termCount": {
+          "type": "integer"
+        },
+        "frequency": {
+          "type": "string",
+          "enum": ["daily", "weekly", "monthly", "custom"]
+        },
+        "customIntervalDays": {
+          "type": "integer"
+        },
+        "startDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "adminFee": {
+          "type": "number"
+        },
+        "lateFeeType": {
+          "type": "string",
+          "enum": ["fixed", "percent"]
+        },
+        "lateFeeValue": {
+          "type": "number"
+        },
+        "gracePeriodDays": {
+          "type": "integer"
+        },
+        "collateralText": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "collateralPhotoUrl": {
+          "type": "string",
+          "maxLength": 250000
+        },
+        "signatureDataUrl": {
+          "type": "string",
+          "maxLength": 120000
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "settled", "written_off", "renewed"]
+        },
+        "totalPayable": {
+          "type": "number"
+        },
+        "totalInterest": {
+          "type": "number"
+        },
+        "paidPrincipal": {
+          "type": "number"
+        },
+        "paidInterest": {
+          "type": "number"
+        },
+        "paidPenalty": {
+          "type": "number"
+        },
+        "outstandingBalance": {
+          "type": "number"
+        },
+        "parentLoanId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "portalShareId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "borrowerId",
+        "borrowerName",
+        "currency",
+        "principal",
+        "interestRate",
+        "interestType",
+        "termCount",
+        "frequency",
+        "startDate",
+        "status",
+        "totalPayable",
+        "outstandingBalance",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LoanSchedule": {
+      "title": "LoanSchedule",
+      "description": "Individual repayment installment under a loan.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "loanId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "installmentNumber": {
+          "type": "integer"
+        },
+        "dueDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "principalDue": {
+          "type": "number"
+        },
+        "interestDue": {
+          "type": "number"
+        },
+        "totalDue": {
+          "type": "number"
+        },
+        "principalPaid": {
+          "type": "number"
+        },
+        "interestPaid": {
+          "type": "number"
+        },
+        "penaltyPaid": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "partial", "paid", "overdue"]
+        },
+        "paidAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "loanId",
+        "borrowerId",
+        "installmentNumber",
+        "dueDate",
+        "principalDue",
+        "interestDue",
+        "totalDue",
+        "principalPaid",
+        "interestPaid",
+        "penaltyPaid",
+        "status",
+        "updatedAt"
+      ]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Recorded repayment transaction with principal/interest/penalty allocation and method.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "loanId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "KHR"]
+        },
+        "amount": {
+          "type": "number"
+        },
+        "principalPortion": {
+          "type": "number"
+        },
+        "interestPortion": {
+          "type": "number"
+        },
+        "penaltyPortion": {
+          "type": "number"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["cash", "bank_transfer", "khqr_aba"]
+        },
+        "paymentDate": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "referenceNo": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "collectedBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "gpsLat": {
+          "type": "number"
+        },
+        "gpsLng": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "loanId",
+        "borrowerId",
+        "borrowerName",
+        "currency",
+        "amount",
+        "principalPortion",
+        "interestPortion",
+        "penaltyPortion",
+        "method",
+        "paymentDate",
+        "createdAt"
+      ]
+    },
+    "StaffMember": {
+      "title": "StaffMember",
+      "description": "Collector or staff member profile managed by the owner.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "role": {
+          "type": "string",
+          "enum": ["owner", "collector"]
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "name", "role", "active", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable append-only audit trail of mutations.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "entityType": {
+          "type": "string",
+          "enum": ["borrower", "loan", "payment", "staff", "settings"]
+        },
+        "entityId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "actorUid", "actorName", "action", "entityType", "entityId", "summary", "createdAt"]
+    },
+    "PortalShare": {
+      "title": "PortalShare",
+      "description": "Non-PII read-only borrower portal snapshot accessed by exact share token.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "loanId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "borrowerFirstName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "lenderName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "lenderPhone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "lenderLogoDataUrl": {
+          "type": "string",
+          "maxLength": 200000
+        },
+        "currency": {
+          "type": "string",
+          "enum": ["USD", "KHR"]
+        },
+        "principal": {
+          "type": "number"
+        },
+        "interestType": {
+          "type": "string",
+          "enum": ["flat", "reducing", "interest_only"]
+        },
+        "interestRate": {
+          "type": "number"
+        },
+        "totalPayable": {
+          "type": "number"
+        },
+        "outstandingBalance": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "settled", "written_off", "renewed"]
+        },
+        "schedules": {
+          "type": "array",
+          "description": "Compact schedule lines (up to 120 items)"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "loanId",
+        "borrowerFirstName",
+        "lenderName",
+        "currency",
+        "principal",
+        "totalPayable",
+        "outstandingBalance",
+        "status",
+        "schedules",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner user settings and profile."
+    },
+    "/borrowers/{borrowerId}": {
+      "schema": { "$ref": "#/entities/Borrower" },
+      "description": "Borrowers owned by the authenticated lender."
+    },
+    "/loans/{loanId}": {
+      "schema": { "$ref": "#/entities/Loan" },
+      "description": "Loans owned by the authenticated lender."
+    },
+    "/loans/{loanId}/schedules/{installmentId}": {
+      "schema": { "$ref": "#/entities/LoanSchedule" },
+      "description": "Installment schedules belonging to a loan."
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Repayment transactions owned by the authenticated lender."
+    },
+    "/staff/{staffId}": {
+      "schema": { "$ref": "#/entities/StaffMember" },
+      "description": "Collector/staff roster owned by the lender."
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Append-only audit trail owned by the lender."
+    },
+    "/portalShares/{shareId}": {
+      "schema": { "$ref": "#/entities/PortalShare" },
+      "description": "Token-addressed borrower balance view without PII."
+    }
+  }
+}

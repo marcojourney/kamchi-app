@@ -1,0 +1,588 @@
+import React, { useEffect, useState } from 'react';
+import {
+  Building2,
+  Camera,
+  Download,
+  Image as ImageIcon,
+  Lock,
+  LogOut,
+  Moon,
+  Phone,
+  Plus,
+  Sun,
+  Trash2,
+  Upload,
+  X,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useApp } from '../context/AppContext';
+import { compressLogoToDataUrl } from '../lib/finance';
+import type { AppLanguage, CurrencyCode } from '../types/loan';
+import { CameraCaptureModal } from './CameraCaptureModal';
+import { PWAInstallButton } from './PWAInstallButton';
+
+export const SettingsView: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const {
+    profile,
+    theme,
+    toggleTheme,
+    staff,
+    updateSettings,
+    setPinCode,
+    addStaffMember,
+    toggleStaffActive,
+    deleteStaffMember,
+    exportAllDataJson,
+    importAllDataJson,
+    signOut,
+  } = useApp();
+
+  const [lenderName, setLenderName] = useState(profile?.displayName || '');
+  const [lenderPhone, setLenderPhone] = useState(profile?.lenderPhone || '');
+  const [lenderLogoDataUrl, setLenderLogoDataUrl] = useState(profile?.lenderLogoDataUrl || '');
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  const [lang, setLang] = useState<AppLanguage>(profile?.preferredLang || 'en');
+  const [defaultCurrency, setDefaultCurrency] = useState<CurrencyCode>(
+    profile?.defaultCurrency || 'USD'
+  );
+  const [exchangeRateKhr, setExchangeRateKhr] = useState(
+    String(profile?.exchangeRateKhr ?? 4100)
+  );
+  const [capitalCashUsd, setCapitalCashUsd] = useState(
+    String(profile?.capitalCashUsd ?? 0)
+  );
+  const [capitalCashKhr, setCapitalCashKhr] = useState(
+    String(profile?.capitalCashKhr ?? 0)
+  );
+  const [useKhmerNumerals, setUseKhmerNumerals] = useState(
+    Boolean(profile?.useKhmerNumerals)
+  );
+  const [biometricEnabled, setBiometricEnabled] = useState(
+    Boolean(profile?.biometricEnabled)
+  );
+  const [pinInput, setPinInput] = useState('');
+  const [staffName, setStaffName] = useState('');
+  const [staffPhone, setStaffPhone] = useState('');
+  const [staffRole, setStaffRole] = useState<'owner' | 'collector'>('collector');
+  const [toast, setToast] = useState('');
+
+  useEffect(() => {
+    if (!profile) return;
+    setLenderName(profile.displayName || '');
+    setLenderPhone(profile.lenderPhone || '');
+    setLenderLogoDataUrl(profile.lenderLogoDataUrl || '');
+    setLang(profile.preferredLang || 'en');
+    setDefaultCurrency(profile.defaultCurrency || 'USD');
+    setExchangeRateKhr(String(profile.exchangeRateKhr ?? 4100));
+    setCapitalCashUsd(String(profile.capitalCashUsd ?? 0));
+    setCapitalCashKhr(String(profile.capitalCashKhr ?? 0));
+    setUseKhmerNumerals(Boolean(profile.useKhmerNumerals));
+    setBiometricEnabled(Boolean(profile.biometricEnabled));
+  }, [profile]);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  const handleLanguageChange = async (nextLang: AppLanguage) => {
+    setLang(nextLang);
+    i18n.changeLanguage(nextLang);
+    document.documentElement.lang = nextLang;
+    await updateSettings({ preferredLang: nextLang });
+  };
+
+  const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const dataUrl = await compressLogoToDataUrl(file);
+      setLenderLogoDataUrl(dataUrl);
+    } catch (err) {
+      console.error('Logo compression failed:', err);
+    }
+  };
+
+  const handleSaveLenderProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = lenderName.trim() || profile?.displayName || 'KamChi Lender';
+    setLenderName(cleanName);
+    await updateSettings({
+      displayName: cleanName,
+      lenderPhone: lenderPhone.trim(),
+      lenderLogoDataUrl,
+    });
+    showToast(t('settings.savedToast'));
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = lenderName.trim() || profile?.displayName || 'KamChi Lender';
+    await updateSettings({
+      displayName: cleanName,
+      lenderPhone: lenderPhone.trim(),
+      lenderLogoDataUrl,
+      preferredLang: lang,
+      defaultCurrency,
+      exchangeRateKhr: Number(exchangeRateKhr) || 4100,
+      capitalCashUsd: Number(capitalCashUsd) || 0,
+      capitalCashKhr: Number(capitalCashKhr) || 0,
+      useKhmerNumerals,
+      biometricEnabled,
+    });
+    showToast(t('settings.savedToast'));
+  };
+
+  const handleSavePin = async () => {
+    if (!/^\d{4}$/.test(pinInput)) return;
+    await setPinCode(pinInput);
+    setPinInput('');
+    showToast(t('settings.savedToast'));
+  };
+
+  const handleExportBackup = () => {
+    const json = exportAllDataJson();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kamchi-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    await importAllDataJson(text);
+    showToast(t('settings.importSuccess'));
+  };
+
+  const handleAddStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffName.trim()) return;
+    await addStaffMember(staffName, staffPhone, staffRole);
+    setStaffName('');
+    setStaffPhone('');
+  };
+
+  return (
+    <div className="space-y-5 max-w-3xl">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+          {t('settings.title')}
+        </h1>
+        <PWAInstallButton variant="compact" />
+      </div>
+
+      {toast && (
+        <div className="rounded-xl bg-teal-600 text-white px-4 py-2.5 text-xs font-semibold">
+          {toast}
+        </div>
+      )}
+
+      {/* Lender Profile */}
+      <form
+        onSubmit={handleSaveLenderProfile}
+        className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4"
+      >
+        <div className="flex items-start gap-2.5">
+          <Building2 className="w-4 h-4 text-teal-600 mt-0.5 shrink-0" />
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {t('settings.lenderProfileTitle')}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {t('settings.lenderProfileDesc')}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('settings.lenderName')}
+            </label>
+            <input
+              type="text"
+              maxLength={120}
+              required
+              value={lenderName}
+              onChange={(e) => setLenderName(e.target.value)}
+              placeholder="KamChi Lender"
+              className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('settings.lenderPhone')}
+            </label>
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="tel"
+                maxLength={40}
+                value={lenderPhone}
+                onChange={(e) => setLenderPhone(e.target.value)}
+                placeholder="012 345 678"
+                className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 pl-9 pr-3 text-sm font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+            {t('settings.lenderLogo')}
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="h-16 min-w-[88px] max-w-[180px] px-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 flex items-center justify-center overflow-hidden">
+              {lenderLogoDataUrl ? (
+                <img
+                  src={lenderLogoDataUrl}
+                  alt={lenderName || 'Lender Logo'}
+                  className="max-h-12 w-auto object-contain"
+                />
+              ) : (
+                <ImageIcon className="w-6 h-6 text-slate-400" />
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="min-h-[40px] flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                <Upload className="w-3.5 h-3.5 text-teal-600" />
+                <span>{t('settings.uploadLogo')}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoFile}
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setCameraOpen(true)}
+                className="min-h-[40px] flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                <Camera className="w-3.5 h-3.5 text-teal-600" />
+                <span>{t('borrowers.takePhoto')}</span>
+              </button>
+
+              {lenderLogoDataUrl && (
+                <button
+                  type="button"
+                  onClick={() => setLenderLogoDataUrl('')}
+                  className="min-h-[40px] flex items-center gap-1 rounded-xl border border-red-200 dark:border-red-900/50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>{t('settings.removeLogo')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="min-h-[44px] rounded-xl bg-teal-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-teal-700"
+        >
+          {t('settings.saveSettings')}
+        </button>
+      </form>
+
+      {/* Localization & Currency */}
+      <form
+        onSubmit={handleSave}
+        className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('settings.language')}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['en', 'km'] as AppLanguage[]).map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onClick={() => handleLanguageChange(l)}
+                  className={`min-h-[44px] rounded-xl border text-xs font-semibold transition-colors ${
+                    lang === l
+                      ? 'bg-teal-600 border-teal-600 text-white'
+                      : 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  {l === 'en' ? 'English' : 'ភាសាខ្មែរ'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              {t('settings.defaultCurrency')}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['USD', 'KHR'] as CurrencyCode[]).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setDefaultCurrency(c)}
+                  className={`min-h-[44px] rounded-xl border text-xs font-semibold transition-colors ${
+                    defaultCurrency === c
+                      ? 'bg-teal-600 border-teal-600 text-white'
+                      : 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  {c === 'USD' ? 'USD ($)' : 'KHR (៛)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('settings.exchangeRate')}
+            </label>
+            <input
+              type="number"
+              min="100"
+              value={exchangeRateKhr}
+              onChange={(e) => setExchangeRateKhr(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tabular-nums"
+            />
+          </div>
+
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="w-full min-h-[44px] flex items-center justify-between rounded-xl border border-slate-300 dark:border-slate-700 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <span>{t('settings.darkMode')}</span>
+              {theme === 'dark' ? <Moon className="w-4 h-4 text-teal-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('settings.capitalCashUsd')}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={capitalCashUsd}
+              onChange={(e) => setCapitalCashUsd(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tabular-nums"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('settings.capitalCashKhr')}
+            </label>
+            <input
+              type="number"
+              step="100"
+              value={capitalCashKhr}
+              onChange={(e) => setCapitalCashKhr(e.target.value)}
+              className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tabular-nums"
+            />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={useKhmerNumerals}
+            onChange={(e) => setUseKhmerNumerals(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-teal-600"
+          />
+          <span>{t('settings.khmerNumerals')}</span>
+        </label>
+
+        <button
+          type="submit"
+          className="min-h-[44px] rounded-xl bg-teal-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-teal-700"
+        >
+          {t('settings.saveSettings')}
+        </button>
+      </form>
+
+      {/* PIN Lock */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Lock className="w-4 h-4 text-teal-600" />
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            {t('settings.securityPin')}
+          </h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="password"
+            maxLength={4}
+            inputMode="numeric"
+            value={pinInput}
+            onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            placeholder={t('settings.setPinPlaceholder')}
+            className="w-36 min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tracking-widest"
+          />
+          <button
+            type="button"
+            disabled={pinInput.length !== 4}
+            onClick={handleSavePin}
+            className="min-h-[44px] rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40"
+          >
+            {t('settings.enablePin')}
+          </button>
+          {profile?.pinHash && (
+            <button
+              type="button"
+              onClick={() => setPinCode(null)}
+              className="min-h-[44px] rounded-xl border border-red-200 dark:border-red-900/50 px-4 py-2 text-xs font-semibold text-red-600"
+            >
+              {t('settings.removePin')}
+            </button>
+          )}
+        </div>
+
+        <label className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={biometricEnabled}
+            onChange={(e) => {
+              setBiometricEnabled(e.target.checked);
+              updateSettings({ biometricEnabled: e.target.checked });
+            }}
+            className="w-4 h-4 rounded border-slate-300 text-teal-600"
+          />
+          <span>{t('settings.biometricLabel')}</span>
+        </label>
+      </div>
+
+      {/* Staff / Collector Roster */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {t('settings.staffTitle')}
+        </h2>
+        <form onSubmit={handleAddStaff} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <input
+            type="text"
+            value={staffName}
+            onChange={(e) => setStaffName(e.target.value)}
+            placeholder={t('settings.staffName')}
+            className="min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs"
+          />
+          <input
+            type="tel"
+            value={staffPhone}
+            onChange={(e) => setStaffPhone(e.target.value)}
+            placeholder={t('settings.staffPhone')}
+            className="min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-mono"
+          />
+          <select
+            value={staffRole}
+            onChange={(e) => setStaffRole(e.target.value as 'owner' | 'collector')}
+            className="min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs"
+          >
+            <option value="collector">{t('settings.roleCollector')}</option>
+            <option value="owner">{t('settings.roleOwner')}</option>
+          </select>
+          <button
+            type="submit"
+            className="min-h-[44px] flex items-center justify-center gap-1 rounded-xl bg-teal-600 px-3 text-xs font-semibold text-white"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t('settings.addStaff')}</span>
+          </button>
+        </form>
+
+        {staff.length > 0 && (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
+            {staff.map((m) => (
+              <div key={m.id} className="px-3.5 py-2.5 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{m.name}</span>
+                  <span className="text-slate-500 ml-2">
+                    {m.role} {m.phone ? `· ${m.phone}` : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleStaffActive(m.id, !m.active)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold ${
+                      m.active ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' : 'text-slate-400 bg-slate-100 dark:bg-slate-800'
+                    }`}
+                  >
+                    {m.active ? 'Active' : 'Paused'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteStaffMember(m.id)}
+                    className="p-1.5 text-slate-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Backup & Restore + Sign Out */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          {t('settings.backupTitle')}
+        </h2>
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            onClick={handleExportBackup}
+            className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Download className="w-4 h-4 text-teal-600" />
+            <span>{t('settings.exportBackup')}</span>
+          </button>
+
+          <label className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 cursor-pointer">
+            <Upload className="w-4 h-4 text-teal-600" />
+            <span>{t('settings.importBackup')}</span>
+            <input type="file" accept="application/json" className="hidden" onChange={handleImportBackup} />
+          </label>
+        </div>
+
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <span className="text-xs text-slate-500">{profile?.email}</span>
+          <button
+            type="button"
+            onClick={signOut}
+            className="min-h-[40px] flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900/50 px-3.5 py-2 text-xs font-semibold text-red-600"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{t('auth.signOut')}</span>
+          </button>
+        </div>
+      </div>
+
+      {cameraOpen && (
+        <CameraCaptureModal
+          title={t('settings.lenderLogo')}
+          onCapture={(dataUrl) => {
+            setLenderLogoDataUrl(dataUrl);
+            setCameraOpen(false);
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
