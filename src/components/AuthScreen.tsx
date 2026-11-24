@@ -31,12 +31,20 @@ export const AuthScreen: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-between p-4 sm:p-8">
       <header className="max-w-5xl w-full mx-auto flex items-center justify-between gap-4">
-        <img
-          src="/assets/aistudio/image_01667597.png"
-          alt={t('app.name')}
-          className="h-12 sm:h-14 w-auto object-contain shrink-0"
-          referrerPolicy="no-referrer"
-        />
+        <div className="shrink-0">
+          <img
+            src="/assets/aistudio/image_01667597.png"
+            alt={t('app.name')}
+            className="h-12 sm:h-14 w-auto object-contain dark:hidden"
+            referrerPolicy="no-referrer"
+          />
+          <img
+            src="/assets/aistudio/image_8f57a101.png"
+            alt={t('app.name')}
+            className="hidden dark:block h-12 sm:h-14 w-auto object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
 
         <div className="flex items-center gap-2">
           <PWAInstallButton variant="compact" />
@@ -56,7 +64,13 @@ export const AuthScreen: React.FC = () => {
           <img
             src="/assets/aistudio/image_01667597.png"
             alt="KamChi — Fast. Fair. Clear."
-            className="h-20 sm:h-24 w-auto object-contain"
+            className="h-20 sm:h-24 w-auto object-contain dark:hidden"
+            referrerPolicy="no-referrer"
+          />
+          <img
+            src="/assets/aistudio/image_8f57a101.png"
+            alt="KamChi — Fast. Fair. Clear."
+            className="hidden dark:block h-20 sm:h-24 w-auto object-contain"
             referrerPolicy="no-referrer"
           />
         </div>

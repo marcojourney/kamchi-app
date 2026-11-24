@@ -83,12 +83,20 @@ export const BorrowerPortalView: React.FC<{
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 sm:p-8">
       <div className="max-w-2xl mx-auto space-y-5">
         <header className="flex items-center justify-between">
-          <img
-            src="/assets/aistudio/image_01667597.png"
-            alt={t('app.name')}
-            className="h-12 sm:h-14 w-auto object-contain shrink-0"
-            referrerPolicy="no-referrer"
-          />
+          <div className="shrink-0">
+            <img
+              src="/assets/aistudio/image_01667597.png"
+              alt={t('app.name')}
+              className="h-12 sm:h-14 w-auto object-contain dark:hidden"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src="/assets/aistudio/image_8f57a101.png"
+              alt={t('app.name')}
+              className="hidden dark:block h-12 sm:h-14 w-auto object-contain"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <button
             type="button"
             onClick={toggleLanguage}
@@ -100,8 +108,35 @@ export const BorrowerPortalView: React.FC<{
         </header>
 
         {loading && (
-          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 text-center text-sm text-slate-500">
-            {t('app.loading')}
+          <div className="space-y-4" role="status" aria-busy="true" aria-label={t('app.loading')}>
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 w-28 rounded-md skeleton-shimmer" />
+                  <div className="h-6 w-44 rounded-lg skeleton-shimmer" />
+                  <div className="h-3 w-36 rounded-md skeleton-shimmer opacity-75" />
+                </div>
+                <div className="h-5 w-16 rounded-md skeleton-shimmer-teal" />
+              </div>
+              <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 w-16 rounded-md skeleton-shimmer" />
+                    <div
+                      className={`h-5 w-24 max-w-full rounded-md ${
+                        i === 2 ? 'skeleton-shimmer-teal' : 'skeleton-shimmer'
+                      }`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+              <div className="h-4 w-36 rounded-md skeleton-shimmer" />
+              {[0, 1, 2, 3].map((row) => (
+                <div key={row} className="h-9 w-full rounded-lg skeleton-shimmer opacity-80" />
+              ))}
+            </div>
           </div>
         )}
 

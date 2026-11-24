@@ -79,3 +79,52 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top);
 }
+
+@keyframes kamchi-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(226 232 240 / 0.75) 25%,
+    rgb(241 245 249 / 0.95) 50%,
+    rgb(226 232 240 / 0.75) 75%
+  );
+  background-size: 200% 100%;
+  animation: kamchi-shimmer 1.6s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(30 41 59 / 0.85) 25%,
+    rgb(51 65 85 / 0.75) 50%,
+    rgb(30 41 59 / 0.85) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.skeleton-shimmer-teal {
+  background: linear-gradient(
+    90deg,
+    rgb(13 148 136 / 0.14) 25%,
+    rgb(20 184 166 / 0.26) 50%,
+    rgb(13 148 136 / 0.14) 75%
+  );
+  background-size: 200% 100%;
+  animation: kamchi-shimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer,
+  .skeleton-shimmer-teal {
+    animation: none;
+  }
+}
+

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppProvider, useApp } from './context/AppContext';
+import { AppSkeleton } from './components/AppSkeleton';
 import { BorrowerPortalView } from './components/BorrowerPortalView';
 import { BorrowersView } from './components/BorrowersView';
 import { CreateLoanModal } from './components/CreateLoanModal';
@@ -59,11 +60,7 @@ const MainShell: React.FC = () => {
   };
 
   if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-sm text-slate-500">
-        {t('app.loading')}
-      </div>
-    );
+    return <AppSkeleton />;
   }
 
   if (isPinLocked) {
@@ -100,7 +97,13 @@ const MainShell: React.FC = () => {
             <img
               src="/assets/aistudio/image_01667597.png"
               alt={t('app.name')}
-              className="h-14 w-auto object-contain"
+              className="h-14 w-auto object-contain dark:hidden"
+              referrerPolicy="no-referrer"
+            />
+            <img
+              src="/assets/aistudio/image_8f57a101.png"
+              alt={t('app.name')}
+              className="hidden dark:block h-14 w-auto object-contain"
               referrerPolicy="no-referrer"
             />
           </div>
@@ -154,12 +157,20 @@ const MainShell: React.FC = () => {
         {/* Top Header (Mobile & Desktop) */}
         <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="/assets/aistudio/image_01667597.png"
-              alt={t('app.name')}
-              className="lg:hidden h-11 sm:h-12 w-auto object-contain shrink-0"
-              referrerPolicy="no-referrer"
-            />
+            <div className="lg:hidden shrink-0">
+              <img
+                src="/assets/aistudio/image_01667597.png"
+                alt={t('app.name')}
+                className="h-11 sm:h-12 w-auto object-contain dark:hidden"
+                referrerPolicy="no-referrer"
+              />
+              <img
+                src="/assets/aistudio/image_8f57a101.png"
+                alt={t('app.name')}
+                className="hidden dark:block h-11 sm:h-12 w-auto object-contain"
+                referrerPolicy="no-referrer"
+              />
+            </div>
             <span className="hidden lg:inline-block text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
               {activeNavLabel}
             </span>

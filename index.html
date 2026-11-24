@@ -29,9 +29,197 @@
       rel="stylesheet"
       crossorigin="anonymous"
     />
+    <script>
+      try {
+        if (localStorage.getItem('rielledger_theme') === 'dark') {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      .kc-boot {
+        min-height: 100vh;
+        background: #f8fafc;
+        color: #0f172a;
+        display: flex;
+      }
+      html.dark .kc-boot {
+        background: #020617;
+        color: #f1f5f9;
+      }
+      .kc-boot-sidebar {
+        display: none;
+      }
+      .kc-boot-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      @media (min-width: 1024px) {
+        .kc-boot-sidebar {
+          width: 256px;
+          flex-shrink: 0;
+          border-right: 1px solid #e2e8f0;
+          background: #ffffff;
+          padding: 20px 16px;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+        html.dark .kc-boot-sidebar {
+          border-right-color: #1e293b;
+          background: #0f172a;
+        }
+        .kc-boot-mobile-logo {
+          display: none !important;
+        }
+      }
+      .kc-boot-header {
+        height: 64px;
+        padding: 0 24px;
+        border-bottom: 1px solid #e2e8f0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      html.dark .kc-boot-header {
+        border-bottom-color: #1e293b;
+        background: rgba(15, 23, 42, 0.9);
+      }
+      .kc-boot-logo-dark {
+        display: none;
+      }
+      html.dark .kc-boot-logo-light {
+        display: none;
+      }
+      html.dark .kc-boot-logo-dark {
+        display: block;
+      }
+      .kc-boot-main {
+        width: 100%;
+        max-width: 1152px;
+        margin: 0 auto;
+        padding: 20px 16px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .kc-boot-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      @media (min-width: 1024px) {
+        .kc-boot-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 16px;
+        }
+      }
+      .kc-boot-card {
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      html.dark .kc-boot-card {
+        border-color: #1e293b;
+        background: #0f172a;
+      }
+      @keyframes kc-boot-shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+      .kc-bar {
+        border-radius: 8px;
+        background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+        background-size: 200% 100%;
+        animation: kc-boot-shimmer 1.6s ease-in-out infinite;
+      }
+      html.dark .kc-bar {
+        background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+        background-size: 200% 100%;
+      }
+      .kc-bar-teal {
+        border-radius: 8px;
+        background: linear-gradient(90deg, rgba(13, 148, 136, 0.16) 25%, rgba(20, 184, 166, 0.28) 50%, rgba(13, 148, 136, 0.16) 75%);
+        background-size: 200% 100%;
+        animation: kc-boot-shimmer 1.6s ease-in-out infinite;
+      }
+    </style>
   </head>
   <body class="bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-    <div id="root"></div>
+    <div id="root">
+      <div class="kc-boot" aria-busy="true">
+        <aside class="kc-boot-sidebar">
+          <div>
+            <img src="/assets/aistudio/image_01667597.png" alt="KamChi" class="kc-boot-logo-light" style="height:56px;width:auto;object-fit:contain;" />
+            <img src="/assets/aistudio/image_8f57a101.png" alt="KamChi" class="kc-boot-logo-dark" style="height:56px;width:auto;object-fit:contain;" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="kc-bar-teal" style="height:44px;border-radius:12px;"></div>
+            <div class="kc-bar" style="height:40px;border-radius:12px;opacity:0.75;"></div>
+            <div class="kc-bar" style="height:40px;border-radius:12px;opacity:0.75;"></div>
+            <div class="kc-bar" style="height:40px;border-radius:12px;opacity:0.75;"></div>
+            <div class="kc-bar" style="height:40px;border-radius:12px;opacity:0.75;"></div>
+          </div>
+        </aside>
+        <div class="kc-boot-body">
+          <div class="kc-boot-header">
+            <div class="kc-boot-mobile-logo">
+              <img src="/assets/aistudio/image_01667597.png" alt="KamChi" class="kc-boot-logo-light" style="height:44px;width:auto;object-fit:contain;" />
+              <img src="/assets/aistudio/image_8f57a101.png" alt="KamChi" class="kc-boot-logo-dark" style="height:44px;width:auto;object-fit:contain;" />
+            </div>
+            <div class="kc-bar" style="width:40px;height:40px;border-radius:9999px;margin-left:auto;"></div>
+          </div>
+          <div class="kc-boot-main">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="kc-bar" style="width:176px;height:24px;"></div>
+                <div class="kc-bar" style="width:200px;height:14px;opacity:0.75;"></div>
+              </div>
+              <div class="kc-bar-teal" style="width:112px;height:42px;border-radius:12px;"></div>
+            </div>
+            <div class="kc-boot-grid">
+              <div class="kc-boot-card">
+                <div class="kc-bar" style="width:55%;height:12px;"></div>
+                <div class="kc-bar" style="width:80%;height:24px;"></div>
+                <div class="kc-bar" style="width:65%;height:12px;opacity:0.75;"></div>
+              </div>
+              <div class="kc-boot-card">
+                <div class="kc-bar" style="width:55%;height:12px;"></div>
+                <div class="kc-bar-teal" style="width:80%;height:24px;"></div>
+                <div class="kc-bar" style="width:65%;height:12px;opacity:0.75;"></div>
+              </div>
+              <div class="kc-boot-card">
+                <div class="kc-bar" style="width:55%;height:12px;"></div>
+                <div class="kc-bar" style="width:75%;height:24px;"></div>
+                <div class="kc-bar" style="width:60%;height:12px;opacity:0.75;"></div>
+              </div>
+              <div class="kc-boot-card">
+                <div class="kc-bar" style="width:55%;height:12px;"></div>
+                <div class="kc-bar" style="width:75%;height:24px;"></div>
+                <div class="kc-bar" style="width:60%;height:12px;opacity:0.75;"></div>
+              </div>
+            </div>
+            <div class="kc-boot-card" style="gap:14px;">
+              <div class="kc-bar" style="width:160px;height:16px;"></div>
+              <div class="kc-bar" style="width:100%;height:180px;border-radius:12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

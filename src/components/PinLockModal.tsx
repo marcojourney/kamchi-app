@@ -38,26 +38,45 @@ export const PinLockModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-xs rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-6">
+      <div className="w-full max-w-xs rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-5 shadow-sm">
+        <div className="flex flex-col items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+          <img
+            src="/assets/aistudio/image_01667597.png"
+            alt={t('app.name')}
+            className="h-10 sm:h-11 w-auto object-contain dark:hidden"
+            referrerPolicy="no-referrer"
+          />
+          <img
+            src="/assets/aistudio/image_8f57a101.png"
+            alt={t('app.name')}
+            className="hidden dark:block h-10 sm:h-11 w-auto object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 mx-auto flex items-center justify-center">
-            <Lock className="w-6 h-6" />
+          <div className="w-11 h-11 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 mx-auto flex items-center justify-center">
+            <Lock className="w-5 h-5" />
           </div>
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             {t('auth.pinLockTitle')}
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {profile?.email || profile?.displayName}
-          </p>
+          {(profile?.email || profile?.displayName) && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {profile?.email || profile?.displayName}
+            </p>
+          )}
         </div>
 
-        <div className="flex justify-center gap-3 py-1">
+        <div className="flex justify-center gap-3.5 py-1">
           {[0, 1, 2, 3].map((i) => (
             <div
               key={i}
-              className={`w-3.5 h-3.5 rounded-full border transition-colors ${
-                pin.length > i
-                  ? 'bg-teal-600 border-teal-600'
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-150 ${
+                error
+                  ? 'bg-red-500 border-red-500 scale-105'
+                  : pin.length > i
+                  ? 'bg-teal-600 border-teal-600 scale-110'
                   : 'bg-transparent border-slate-300 dark:border-slate-700'
               }`}
             />
