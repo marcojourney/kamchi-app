@@ -530,7 +530,11 @@ export function buildDemoWorkspaceBundle(todayIso: string, ownerId: string): Dem
     schedulesByLoan,
     payments,
     staff,
-    suggestedCashUsd: 4500,
-    suggestedCashKhr: 8200000,
+    suggestedCashUsd: DEMO_CASH_USD,
+    suggestedCashKhr: DEMO_CASH_KHR,
   };
 }
+
+export const DEMO_CASH_USD = 4500;
+export const DEMO_CASH_KHR = 8200000;
+

@@ -30,12 +30,17 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const suggestedAmount = nextDueInstallment
     ? Math.max(
         0,
-        nextDueInstallment.totalDue -
-          (nextDueInstallment.principalPaid + nextDueInstallment.interestPaid)
+        Math.round(
+          (nextDueInstallment.totalDue -
+            (nextDueInstallment.principalPaid + nextDueInstallment.interestPaid)) *
+            100
+        ) / 100
       )
-    : loan.outstandingBalance;
+    : Math.round(loan.outstandingBalance * 100) / 100;
 
-  const [amount, setAmount] = useState<string>(String(suggestedAmount || loan.outstandingBalance));
+  const [amount, setAmount] = useState<string>(
+    String(suggestedAmount || Math.round(loan.outstandingBalance * 100) / 100)
+  );
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [paymentDate, setPaymentDate] = useState(todayIso);
   const [referenceNo, setReferenceNo] = useState('');
@@ -130,7 +135,9 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               </label>
               <button
                 type="button"
-                onClick={() => setAmount(String(loan.outstandingBalance))}
+                onClick={() =>
+                  setAmount(String(Math.round(loan.outstandingBalance * 100) / 100))
+                }
                 className="text-xs font-semibold text-teal-600 hover:text-teal-700"
               >
                 {t('loans.earlySettle')}
@@ -138,7 +145,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             </div>
             <input
               type="number"
-              step={loan.currency === 'KHR' ? '100' : '0.01'}
+              inputMode="decimal"
+              step="any"
               min="0.01"
               required
               value={amount}

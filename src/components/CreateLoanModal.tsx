@@ -217,7 +217,8 @@ export const CreateLoanModal: React.FC<CreateLoanModalProps> = ({
             </label>
             <input
               type="number"
-              step={currency === 'KHR' ? '100' : '0.01'}
+              inputMode="decimal"
+              step="any"
               min="1"
               required
               value={principal}
@@ -232,7 +233,8 @@ export const CreateLoanModal: React.FC<CreateLoanModalProps> = ({
             </label>
             <input
               type="number"
-              step="0.1"
+              inputMode="decimal"
+              step="any"
               min="0"
               required
               value={interestRate}
@@ -322,8 +324,9 @@ export const CreateLoanModal: React.FC<CreateLoanModalProps> = ({
             </label>
             <input
               type="number"
+              inputMode="decimal"
               min="0"
-              step="0.01"
+              step="any"
               value={adminFee}
               onChange={(e) => setAdminFee(e.target.value)}
               className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono text-slate-900 dark:text-slate-100"
@@ -351,8 +354,9 @@ export const CreateLoanModal: React.FC<CreateLoanModalProps> = ({
               </label>
               <input
                 type="number"
+                inputMode="decimal"
                 min="0"
-                step="0.01"
+                step="any"
                 value={lateFeeValue}
                 onChange={(e) => setLateFeeValue(e.target.value)}
                 className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-mono text-slate-900 dark:text-slate-100"

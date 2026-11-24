@@ -37,7 +37,7 @@ import {
   saveLocalWorkspace,
   type LocalWorkspaceData,
 } from '../lib/localStore';
-import { buildDemoWorkspaceBundle } from '../lib/demoData';
+import { buildDemoWorkspaceBundle, DEMO_CASH_KHR, DEMO_CASH_USD } from '../lib/demoData';
 import type {
   AppLanguage,
   AuditLog,
@@ -137,10 +137,11 @@ interface AppContextValue {
   addStaffMember: (name: string, phone: string, role: 'owner' | 'collector') => Promise<void>;
   toggleStaffActive: (staffId: string, active: boolean) => Promise<void>;
   deleteStaffMember: (staffId: string) => Promise<void>;
-  ensureSchedulesLoaded: (loanId: string) => Promise<void>;
+  ensureSchedulesLoaded: (loanId: string) => Promise<LoanSchedule[]>;
   exportAllDataJson: () => string;
   importAllDataJson: (jsonText: string) => Promise<void>;
   importDemoData: () => Promise<number>;
+  clearDemoData: () => Promise<number>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -537,9 +538,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [authReady, user, activeLoanIdsKey]);
 
   const ensureSchedulesLoaded = useCallback(
-    async (loanId: string) => {
-      if (schedulesByLoan[loanId]) return;
-      if (!user) return;
+    async (loanId: string): Promise<LoanSchedule[]> => {
+      if (schedulesByLoan[loanId]) return schedulesByLoan[loanId];
+      if (!user) return localWorkspaceRef.current.schedulesByLoan[loanId] || [];
       const path = `loans/${loanId}/schedules`;
       try {
         const snap = await getDocs(
@@ -548,8 +549,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const list = snap.docs.map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }));
         list.sort((a, b) => a.installmentNumber - b.installmentNumber);
         setSchedulesByLoan((prev) => ({ ...prev, [loanId]: list }));
+        return list;
       } catch (error) {
         handleFirestoreError(error, OperationType.LIST, path);
+        return [];
       }
     },
     [user, schedulesByLoan]
@@ -1903,6 +1906,162 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user, todayIso, borrowers, loans, payments, staff, profile?.capitalCashUsd, profile?.capitalCashKhr, commitLocal, writeAuditLog]);
 
+  const clearDemoData = useCallback(async (): Promise<number> => {
+    const demoBorrowers = borrowers.filter((b) => b.id.startsWith('demo_brw_'));
+    const demoBorrowerIds = new Set(demoBorrowers.map((b) => b.id));
+    const demoLoans = loans.filter(
+      (l) => l.id.startsWith('demo_ln_') || demoBorrowerIds.has(l.borrowerId)
+    );
+    const demoLoanIds = new Set(demoLoans.map((l) => l.id));
+    const demoPayments = payments.filter(
+      (p) =>
+        p.id.startsWith('demo_pay_') ||
+        demoLoanIds.has(p.loanId) ||
+        demoBorrowerIds.has(p.borrowerId)
+    );
+    const demoPaymentIds = new Set(demoPayments.map((p) => p.id));
+    const demoStaff = staff.filter((m) => m.id.startsWith('demo_stf_'));
+    const demoStaffIds = new Set(demoStaff.map((m) => m.id));
+
+    const totalRemoved =
+      demoBorrowers.length + demoLoans.length + demoPayments.length + demoStaff.length;
+    const shouldResetCash =
+      (profile?.capitalCashUsd ?? 0) === DEMO_CASH_USD &&
+      (profile?.capitalCashKhr ?? 0) === DEMO_CASH_KHR;
+
+    if (totalRemoved === 0 && !shouldResetCash) {
+      return 0;
+    }
+
+    if (!user) {
+      await commitLocal((prev) => {
+        const nextSchedules: Record<string, LoanSchedule[]> = {};
+        for (const [lId, list] of Object.entries(prev.schedulesByLoan)) {
+          if (!demoLoanIds.has(lId)) {
+            nextSchedules[lId] = list;
+          }
+        }
+        return {
+          ...prev,
+          profile: shouldResetCash
+            ? {
+                ...prev.profile,
+                capitalCashUsd: 0,
+                capitalCashKhr: 0,
+                updatedAt: new Date().toISOString(),
+              }
+            : prev.profile,
+          borrowers: prev.borrowers.filter((b) => !demoBorrowerIds.has(b.id)),
+          loans: prev.loans.filter((l) => !demoLoanIds.has(l.id)),
+          schedulesByLoan: nextSchedules,
+          payments: prev.payments.filter((p) => !demoPaymentIds.has(p.id)),
+          staff: prev.staff.filter((m) => !demoStaffIds.has(m.id)),
+        };
+      });
+
+      await writeAuditLog(
+        'clear_demo',
+        'settings',
+        LOCAL_UID,
+        `Cleaned demo portfolio (${demoBorrowers.length} borrowers, ${demoLoans.length} loans)`
+      );
+      return totalRemoved;
+    }
+
+    try {
+      // Batch 1: Delete schedules, portalShares, payments, and staff BEFORE deleting parent loan docs
+      const batch1Ops: Array<(b: ReturnType<typeof writeBatch>) => void> = [];
+
+      for (const ln of demoLoans) {
+        let schList = schedulesByLoan[ln.id];
+        if (!schList) {
+          const snap = await getDocs(
+            query(collection(db, 'loans', ln.id, 'schedules'), where('ownerId', '==', user.uid))
+          );
+          schList = snap.docs.map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }));
+        }
+        for (const sch of schList) {
+          batch1Ops.push((batch) => batch.delete(doc(db, 'loans', ln.id, 'schedules', sch.id)));
+        }
+        if (ln.portalShareId) {
+          const shareId = ln.portalShareId;
+          batch1Ops.push((batch) => batch.delete(doc(db, 'portalShares', shareId)));
+        }
+      }
+
+      for (const pay of demoPayments) {
+        batch1Ops.push((batch) => batch.delete(doc(db, 'payments', pay.id)));
+      }
+      for (const member of demoStaff) {
+        batch1Ops.push((batch) => batch.delete(doc(db, 'staff', member.id)));
+      }
+
+      for (let i = 0; i < batch1Ops.length; i += 400) {
+        const b = writeBatch(db);
+        for (const op of batch1Ops.slice(i, i + 400)) {
+          op(b);
+        }
+        await b.commit();
+      }
+
+      // Batch 2: Delete demo loans and borrowers
+      const batch2Ops: Array<(b: ReturnType<typeof writeBatch>) => void> = [];
+      for (const ln of demoLoans) {
+        batch2Ops.push((batch) => batch.delete(doc(db, 'loans', ln.id)));
+      }
+      for (const brw of demoBorrowers) {
+        batch2Ops.push((batch) => batch.delete(doc(db, 'borrowers', brw.id)));
+      }
+
+      for (let i = 0; i < batch2Ops.length; i += 400) {
+        const b = writeBatch(db);
+        for (const op of batch2Ops.slice(i, i + 400)) {
+          op(b);
+        }
+        await b.commit();
+      }
+
+      if (demoLoanIds.size > 0) {
+        setSchedulesByLoan((prev) => {
+          const next = { ...prev };
+          for (const id of demoLoanIds) {
+            delete next[id];
+          }
+          return next;
+        });
+      }
+
+      if (shouldResetCash) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          capitalCashUsd: 0,
+          capitalCashKhr: 0,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await writeAuditLog(
+        'clear_demo',
+        'settings',
+        user.uid,
+        `Cleaned demo portfolio (${demoBorrowers.length} borrowers, ${demoLoans.length} loans)`
+      );
+      return totalRemoved;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, 'demo_cleanup');
+    }
+  }, [
+    user,
+    borrowers,
+    loans,
+    schedulesByLoan,
+    payments,
+    staff,
+    profile?.capitalCashUsd,
+    profile?.capitalCashKhr,
+    commitLocal,
+    writeAuditLog,
+  ]);
+
   const isWorkspaceReady = authReady && (Boolean(user) || localLoaded);
 
   const value: AppContextValue = {
@@ -1942,6 +2101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     exportAllDataJson,
     importAllDataJson,
     importDemoData,
+    clearDemoData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

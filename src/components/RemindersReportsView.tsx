@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
   Bell,
@@ -17,7 +17,7 @@ import {
   formatDateLocalized,
 } from '../lib/finance';
 import type { AgingBucketKey } from '../lib/finance';
-import { exportElementToPdf, exportLoansAndPaymentsToExcel } from '../lib/pdfExport';
+import { exportLoansAndPaymentsToExcel, exportPnlReportPdf } from '../lib/pdfExport';
 import type { Loan } from '../types/loan';
 import { ArrearsView } from './ArrearsView';
 
@@ -63,8 +63,6 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
   const [draftMessages, setDraftMessages] = useState<Record<string, string>>({});
   const [telegramChatId, setTelegramChatId] = useState('');
   const [statusNotice, setStatusNotice] = useState('');
-
-  const reportCardRef = useRef<HTMLDivElement | null>(null);
 
   const reminderItems = useMemo(() => {
     const horizon = format(addDays(parseISO(todayIso), 7), 'yyyy-MM-dd');
@@ -363,7 +361,25 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => reportCardRef.current && exportElementToPdf(reportCardRef.current, `kamchi-pnl-${todayIso}.pdf`)}
+              onClick={() =>
+                exportPnlReportPdf({
+                  lenderName: profile?.displayName || t('app.name'),
+                  lenderPhone: profile?.lenderPhone,
+                  lenderLogoDataUrl: profile?.lenderLogoDataUrl,
+                  reportDate: todayIso,
+                  currency: displayCurrency,
+                  interestEarned: pnl.interestEarned,
+                  penaltiesEarned: pnl.penaltiesEarned,
+                  principalRecovered: pnl.principalRecovered,
+                  writtenOffLoss: pnl.writtenOffLoss,
+                  netProfit: pnl.netProfit,
+                  cashOnHand: pnl.cashOnHand,
+                  capitalLentOut: pnl.capitalLentOut,
+                  loans,
+                  lang,
+                  useKhmerNumerals: useKh,
+                })
+              }
               className="min-h-[44px] flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700"
             >
               <FileText className="w-4 h-4" />
@@ -380,7 +396,6 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
           </div>
 
           <div
-            ref={reportCardRef}
             className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4"
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

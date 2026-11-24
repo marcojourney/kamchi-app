@@ -233,43 +233,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
+        <div className="min-w-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.outstanding')}</p>
-          <p className="text-xl sm:text-2xl font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+          <p className="text-base sm:text-xl font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums whitespace-nowrap truncate">
             {fmt(metrics.outstanding)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-            {t('dashboard.expectedInterest')}: {fmt(metrics.expectedInterest)}
+          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums flex flex-wrap items-baseline gap-x-1">
+            <span>{t('dashboard.expectedInterest')}:</span>
+            <span className="font-mono whitespace-nowrap">{fmt(metrics.expectedInterest)}</span>
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
+        <div className="min-w-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.totalCollected')}</p>
-          <p className="text-xl sm:text-2xl font-mono font-bold text-emerald-600 tabular-nums">
+          <p className="text-base sm:text-xl font-mono font-bold text-emerald-600 tabular-nums whitespace-nowrap truncate">
             {fmt(metrics.totalCollected)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-            {t('dashboard.totalLent')}: {fmt(metrics.totalLent)}
+          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums flex flex-wrap items-baseline gap-x-1">
+            <span>{t('dashboard.totalLent')}:</span>
+            <span className="font-mono whitespace-nowrap">{fmt(metrics.totalLent)}</span>
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
+        <div className="min-w-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.overdueAmount')}</p>
-          <p className="text-xl sm:text-2xl font-mono font-bold text-red-600 tabular-nums">
+          <p className="text-base sm:text-xl font-mono font-bold text-red-600 tabular-nums whitespace-nowrap truncate">
             {fmt(metrics.overdueAmount)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-            {t('dashboard.dueToday')}: {fmt(metrics.dueToday)}
+          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums flex flex-wrap items-baseline gap-x-1">
+            <span>{t('dashboard.dueToday')}:</span>
+            <span className="font-mono whitespace-nowrap">{fmt(metrics.dueToday)}</span>
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
+        <div className="min-w-0 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 space-y-1">
           <p className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.dueThisWeek')}</p>
-          <p className="text-xl sm:text-2xl font-mono font-bold text-amber-600 tabular-nums">
+          <p className="text-base sm:text-xl font-mono font-bold text-amber-600 tabular-nums whitespace-nowrap truncate">
             {fmt(metrics.dueThisWeek)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-            {t('dashboard.cashOnHand')}: {fmt(metrics.cashOnHand)}
+          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums flex flex-wrap items-baseline gap-x-1">
+            <span>{t('dashboard.cashOnHand')}:</span>
+            <span className="font-mono whitespace-nowrap">{fmt(metrics.cashOnHand)}</span>
           </p>
         </div>
       </div>
@@ -325,12 +329,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 key={b.key}
                 type="button"
                 onClick={() => onOpenArrears(b.key)}
-                className="w-full flex items-center justify-between py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-lg px-1.5 -mx-1.5 transition-colors"
+                className="w-full flex items-center justify-between gap-2 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded-lg px-1.5 -mx-1.5 transition-colors"
               >
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                   {b.label}
                 </span>
-                <span className={`text-sm font-mono font-bold tabular-nums ${b.color}`}>
+                <span className={`text-sm font-mono font-bold tabular-nums whitespace-nowrap shrink-0 ${b.color}`}>
                   {fmt(b.val)}
                 </span>
               </button>
@@ -359,7 +363,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {metrics.dueQueue.slice(0, 10).map((item) => (
               <div
                 key={`${item.loan.id}-${item.installmentNumber}`}
-                className="px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                className="px-4 sm:px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
               >
                 <button
                   type="button"
@@ -369,29 +373,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {item.loan.borrowerName}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <span>#{item.installmentNumber}</span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mt-0.5">
+                    <span className="whitespace-nowrap">#{item.installmentNumber}</span>
                     <span aria-hidden="true">·</span>
-                    <span className={item.daysOverdue > 0 ? 'text-red-600 font-semibold' : 'text-amber-600 font-semibold'}>
+                    <span
+                      className={`whitespace-nowrap ${
+                        item.daysOverdue > 0
+                          ? 'text-red-600 font-semibold'
+                          : 'text-amber-600 font-semibold'
+                      }`}
+                    >
                       {item.daysOverdue > 0
                         ? t('dashboard.daysOverdue', { count: item.daysOverdue })
                         : t('dashboard.dueTodayTag')}
                     </span>
                     <span aria-hidden="true">·</span>
-                    <span className="font-mono tabular-nums">
+                    <span className="font-mono tabular-nums whitespace-nowrap">
                       {formatDateLocalized(item.dueDate, lang, useKh)}
                     </span>
                   </p>
                 </button>
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <span className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums whitespace-nowrap">
                     {formatCurrency(item.remainingDue, item.loan.currency, lang, useKh)}
                   </span>
                   <button
                     type="button"
                     onClick={() => onSelectLoanForPayment(item.loan)}
-                    className="min-h-[40px] flex items-center gap-1 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 whitespace-nowrap"
+                    className="min-h-[40px] flex items-center gap-1 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 whitespace-nowrap shrink-0"
                   >
                     <span>{t('dashboard.collectNow')}</span>
                     <ArrowUpRight className="w-3.5 h-3.5" />

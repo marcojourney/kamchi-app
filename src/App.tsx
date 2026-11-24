@@ -70,7 +70,11 @@ const MainShell: React.FC = () => {
     return <PinLockModal />;
   }
 
-  const navItems: Array<{ id: NavTab; label: string; icon: React.FC<{ className?: string }> }> = [
+  const navItems: Array<{
+    id: NavTab;
+    label: string;
+    icon: React.FC<{ className?: string; strokeWidth?: number }>;
+  }> = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: Home },
     { id: 'loans', label: t('nav.loans'), icon: FileSpreadsheet },
     { id: 'borrowers', label: t('nav.borrowers'), icon: Users },
@@ -207,7 +211,7 @@ const MainShell: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-24 lg:pb-8">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 lg:pb-8">
           {activeTab === 'dashboard' && (
             <DashboardView
               onNewLoan={() => setShowCreateLoan({ open: true })}
@@ -268,33 +272,56 @@ const MainShell: React.FC = () => {
           {activeTab === 'settings' && <SettingsView />}
         </main>
 
-        {/* Mobile Bottom Tab Bar */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 grid grid-cols-5 h-16 pb-safe">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  if (item.id === 'reports') setReportsSubTabRequest(null);
-                  setActiveTab(item.id);
-                }}
-                className={`flex flex-col items-center justify-center min-h-[44px] px-1 transition-colors ${
-                  active
-                    ? 'text-teal-600 dark:text-teal-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="text-[11px] font-medium mt-0.5 truncate max-w-full">
-                  {item.label}
-                </span>
-              </button>
-            );
-          })}
-        </nav>
+        {/* Mobile Bottom Tab Bar — Floating Frosted Glass Dock */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <nav
+            aria-label="Primary"
+            className="pointer-events-auto mx-auto max-w-md rounded-2xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/70 shadow-[0_8px_30px_rgba(15,23,42,0.10)] dark:shadow-[0_10px_34px_rgba(0,0,0,0.45)] p-1.5 grid grid-cols-5 gap-1"
+          >
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={() => {
+                    if (item.id === 'reports') setReportsSubTabRequest(null);
+                    setActiveTab(item.id);
+                  }}
+                  className={`relative flex flex-col items-center justify-center min-h-[50px] px-1 pt-1 pb-1.5 rounded-xl transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+                    active
+                      ? 'bg-teal-50/90 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 shadow-xs ring-1 ring-teal-500/15 dark:ring-teal-400/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-slate-800/40'
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`h-[3px] w-5 rounded-full transition-all duration-200 mb-1 ${
+                      active
+                        ? 'bg-teal-600 dark:bg-teal-400 opacity-100 scale-x-100'
+                        : 'bg-transparent opacity-0 scale-x-50'
+                    }`}
+                  />
+                  <Icon
+                    className={`w-[19px] h-[19px] transition-transform duration-200 ${
+                      active ? '-translate-y-0.5' : ''
+                    }`}
+                    strokeWidth={active ? 2.25 : 1.75}
+                  />
+                  <span
+                    className={`bottom-nav-label mt-0.5 whitespace-nowrap truncate max-w-full ${
+                      active ? 'font-semibold' : 'font-medium'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
 
       {/* Shared Modals */}

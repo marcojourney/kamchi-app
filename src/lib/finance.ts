@@ -37,7 +37,7 @@ export function formatCurrency(
     const num = new Intl.NumberFormat(locale, {
       maximumFractionDigits: 0,
     }).format(Math.round(safeAmount));
-    formatted = `${num} ៛`;
+    formatted = `${num}\u00A0៛`;
   } else {
     formatted = new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -359,8 +359,9 @@ export function allocatePaymentAcrossSchedules(params: {
 } {
   const { amount, loan, schedules, todayIso } = params;
   const ordered = [...schedules].sort((a, b) => a.installmentNumber - b.installmentNumber);
+  const cleanDec = (val: number) => (Number.isFinite(val) ? Math.round(val * 100) / 100 : 0);
 
-  let remaining = amount;
+  let remaining = cleanDec(amount);
   let penaltyPortion = 0;
   let interestPortion = 0;
   let principalPortion = 0;
@@ -384,30 +385,30 @@ export function allocatePaymentAcrossSchedules(params: {
 
     // 1. Penalty first
     const { accruedPenalty } = computeScheduleLateFee(sch, loan, todayIso);
-    const unpaidPenalty = Math.max(0, accruedPenalty - penPaid);
+    const unpaidPenalty = cleanDec(Math.max(0, accruedPenalty - penPaid));
     if (unpaidPenalty > 0 && remaining > 0) {
-      const payPen = Math.min(remaining, unpaidPenalty);
-      penPaid = roundMoney(penPaid + payPen, loan.currency);
-      penaltyPortion = roundMoney(penaltyPortion + payPen, loan.currency);
-      remaining = roundMoney(remaining - payPen, loan.currency);
+      const payPen = cleanDec(Math.min(remaining, unpaidPenalty));
+      penPaid = cleanDec(penPaid + payPen);
+      penaltyPortion = cleanDec(penaltyPortion + payPen);
+      remaining = cleanDec(remaining - payPen);
     }
 
     // 2. Interest second
-    const unpaidInterest = Math.max(0, sch.interestDue - iPaid);
+    const unpaidInterest = cleanDec(Math.max(0, sch.interestDue - iPaid));
     if (unpaidInterest > 0 && remaining > 0) {
-      const payInt = Math.min(remaining, unpaidInterest);
-      iPaid = roundMoney(iPaid + payInt, loan.currency);
-      interestPortion = roundMoney(interestPortion + payInt, loan.currency);
-      remaining = roundMoney(remaining - payInt, loan.currency);
+      const payInt = cleanDec(Math.min(remaining, unpaidInterest));
+      iPaid = cleanDec(iPaid + payInt);
+      interestPortion = cleanDec(interestPortion + payInt);
+      remaining = cleanDec(remaining - payInt);
     }
 
     // 3. Principal third
-    const unpaidPrincipal = Math.max(0, sch.principalDue - pPaid);
+    const unpaidPrincipal = cleanDec(Math.max(0, sch.principalDue - pPaid));
     if (unpaidPrincipal > 0 && remaining > 0) {
-      const payPrin = Math.min(remaining, unpaidPrincipal);
-      pPaid = roundMoney(pPaid + payPrin, loan.currency);
-      principalPortion = roundMoney(principalPortion + payPrin, loan.currency);
-      remaining = roundMoney(remaining - payPrin, loan.currency);
+      const payPrin = cleanDec(Math.min(remaining, unpaidPrincipal));
+      pPaid = cleanDec(pPaid + payPrin);
+      principalPortion = cleanDec(principalPortion + payPrin);
+      remaining = cleanDec(remaining - payPrin);
     }
 
     const donePrincipal = pPaid >= sch.principalDue - 0.01;
@@ -428,12 +429,12 @@ export function allocatePaymentAcrossSchedules(params: {
 
   // If extra overpayment beyond scheduled amounts remains, credit toward principal
   if (remaining > 0.0001) {
-    principalPortion = roundMoney(principalPortion + remaining, loan.currency);
+    principalPortion = cleanDec(principalPortion + remaining);
   }
 
-  const newPaidPrincipal = roundMoney((loan.paidPrincipal ?? 0) + principalPortion, loan.currency);
-  const newPaidInterest = roundMoney((loan.paidInterest ?? 0) + interestPortion, loan.currency);
-  const newPaidPenalty = roundMoney((loan.paidPenalty ?? 0) + penaltyPortion, loan.currency);
+  const newPaidPrincipal = cleanDec((loan.paidPrincipal ?? 0) + principalPortion);
+  const newPaidInterest = cleanDec((loan.paidInterest ?? 0) + interestPortion);
+  const newPaidPenalty = cleanDec((loan.paidPenalty ?? 0) + penaltyPortion);
 
   const totalScheduledRemaining = ordered.reduce((acc, s) => {
     const upd = updatedSchedules.find((u) => u.id === s.id);
@@ -442,7 +443,7 @@ export function allocatePaymentAcrossSchedules(params: {
     return acc + Math.max(0, s.principalDue - pP) + Math.max(0, s.interestDue - iP);
   }, 0);
 
-  const newOutstandingBalance = roundMoney(Math.max(0, totalScheduledRemaining), loan.currency);
+  const newOutstandingBalance = cleanDec(Math.max(0, totalScheduledRemaining));
   const newStatus: Loan['status'] = newOutstandingBalance <= 0.01 ? 'settled' : 'active';
 
   return {

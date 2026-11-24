@@ -200,7 +200,7 @@
     "confirmWriteOff": "Mark this loan as written off? Outstanding balance will be archived.",
     "exportContractPdf": "Contract PDF",
     "exportSchedulePdf": "Schedule PDF",
-    "exportScheduleExcel": "Schedule Excel (.xls)",
+    "exportScheduleExcel": "Schedule Excel (.xlsx)",
     "sharePortalLink": "Borrower Portal Link",
     "sendReminder": "Send Reminder",
     "calendarTitle": "Due Dates Calendar",
@@ -251,7 +251,7 @@
     "writtenOffLoss": "Written Off",
     "netProfit": "Net Lending Profit",
     "exportPdf": "Export PDF Report",
-    "exportExcel": "Export Excel (.xls)",
+    "exportExcel": "Export Excel (.xlsx)",
     "auditEmpty": "No activity logged yet."
   },
   "settings": {
@@ -297,7 +297,11 @@
     "importDemoButton": "Import Demo Data",
     "importingDemo": "Importing...",
     "importDemoSuccess": "Demo data imported successfully.",
-    "importDemoAlreadyLoaded": "Demo portfolio is already loaded."
+    "importDemoAlreadyLoaded": "Demo portfolio is already loaded.",
+    "clearDemoButton": "Clean Demo Data",
+    "clearingDemo": "Cleaning...",
+    "clearDemoSuccess": "Demo data cleaned successfully.",
+    "clearDemoNothing": "No demo data to clean."
   },
   "portal": {
     "title": "Borrower Loan Summary",
@@ -309,7 +313,7 @@
     "paid": "Paid",
     "unpaid": "Due",
     "downloadPdf": "Download PDF",
-    "downloadExcel": "Download Excel (.xls)",
+    "downloadExcel": "Download Excel (.xlsx)",
     "notFound": "This borrower portal link is invalid or has expired."
   }
 }

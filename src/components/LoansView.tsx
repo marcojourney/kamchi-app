@@ -219,12 +219,12 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportContract = async (loan: Loan) => {
-    await ensureSchedulesLoaded(loan.id);
+    const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     await exportLoanContractPdf({
       loan,
       borrower,
-      schedules: schedulesByLoan[loan.id] || [],
+      schedules,
       lenderName: profile?.displayName || 'KamChi Lender',
       lenderPhone: profile?.lenderPhone,
       lenderLogoDataUrl: profile?.lenderLogoDataUrl,
@@ -234,11 +234,11 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportSchedulePdf = async (loan: Loan) => {
-    await ensureSchedulesLoaded(loan.id);
+    const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     const input = buildCustomerScheduleInputFromLoan(
       loan,
-      schedulesByLoan[loan.id] || [],
+      schedules,
       profile?.displayName || 'KamChi Lender',
       borrower,
       profile?.lenderPhone,
@@ -248,11 +248,11 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportScheduleExcel = async (loan: Loan) => {
-    await ensureSchedulesLoaded(loan.id);
+    const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     const input = buildCustomerScheduleInputFromLoan(
       loan,
-      schedulesByLoan[loan.id] || [],
+      schedules,
       profile?.displayName || 'KamChi Lender',
       borrower,
       profile?.lenderPhone,

@@ -200,7 +200,7 @@
     "confirmWriteOff": "តើអ្នកប្រាកដថាចង់កាត់កម្ចីនេះចោលឬ?",
     "exportContractPdf": "កិច្ចសន្យា PDF",
     "exportSchedulePdf": "កាលវិភាគ PDF",
-    "exportScheduleExcel": "កាលវិភាគ Excel (.xls)",
+    "exportScheduleExcel": "កាលវិភាគ Excel (.xlsx)",
     "sharePortalLink": "តំណភ្ជាប់សម្រាប់អ្នកខ្ចី",
     "sendReminder": "ផ្ញើការរំលឹក",
     "calendarTitle": "ប្រតិទិនថ្ងៃត្រូវសងប្រាក់",
@@ -251,7 +251,7 @@
     "writtenOffLoss": "បំណុលកាត់ចោល",
     "netProfit": "ប្រាក់ចំណេញសុទ្ធ",
     "exportPdf": "ទាញយក PDF",
-    "exportExcel": "ទាញយក Excel (.xls)",
+    "exportExcel": "ទាញយក Excel (.xlsx)",
     "auditEmpty": "មិនទាន់មានកំណត់ត្រាសកម្មភាពទេ។"
   },
   "settings": {
@@ -297,7 +297,11 @@
     "importDemoButton": "នាំចូលទិន្នន័យសាកល្បង",
     "importingDemo": "កំពុងនាំចូល...",
     "importDemoSuccess": "បាននាំចូលទិន្នន័យសាកល្បងដោយជោគជ័យ។",
-    "importDemoAlreadyLoaded": "ទិន្នន័យសាកល្បងត្រូវបាននាំចូលរួចហើយ។"
+    "importDemoAlreadyLoaded": "ទិន្នន័យសាកល្បងត្រូវបាននាំចូលរួចហើយ។",
+    "clearDemoButton": "សម្អាតទិន្នន័យសាកល្បង",
+    "clearingDemo": "កំពុងសម្អាត...",
+    "clearDemoSuccess": "បានសម្អាតទិន្នន័យសាកល្បងដោយជោគជ័យ។",
+    "clearDemoNothing": "មិនមានទិន្នន័យសាកល្បងសម្រាប់សម្អាតទេ។"
   },
   "portal": {
     "title": "សង្ខេបកម្ចីសម្រាប់អ្នកខ្ចី",
@@ -309,7 +313,7 @@
     "paid": "បានបង់",
     "unpaid": "ត្រូវសង",
     "downloadPdf": "ទាញយក PDF",
-    "downloadExcel": "ទាញយក Excel (.xls)",
+    "downloadExcel": "ទាញយក Excel (.xlsx)",
     "notFound": "តំណភ្ជាប់នេះមិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ។"
   }
 }

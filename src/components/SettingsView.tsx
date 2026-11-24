@@ -35,6 +35,9 @@ export const SettingsView: React.FC = () => {
     profile,
     theme,
     toggleTheme,
+    borrowers,
+    loans,
+    payments,
     staff,
     updateSettings,
     setPinCode,
@@ -44,12 +47,20 @@ export const SettingsView: React.FC = () => {
     exportAllDataJson,
     importAllDataJson,
     importDemoData,
+    clearDemoData,
     signInWithGoogle,
     signOut,
   } = useApp();
   const [signingIn, setSigningIn] = useState(false);
   const [importingDemo, setImportingDemo] = useState(false);
+  const [clearingDemo, setClearingDemo] = useState(false);
   const [authError, setAuthError] = useState('');
+
+  const hasDemoData =
+    borrowers.some((b) => b.id.startsWith('demo_brw_')) ||
+    loans.some((l) => l.id.startsWith('demo_ln_')) ||
+    payments.some((p) => p.id.startsWith('demo_pay_')) ||
+    staff.some((m) => m.id.startsWith('demo_stf_'));
 
   const [lenderName, setLenderName] = useState(profile?.displayName || '');
   const [lenderPhone, setLenderPhone] = useState(profile?.lenderPhone || '');
@@ -389,7 +400,8 @@ export const SettingsView: React.FC = () => {
             </label>
             <input
               type="number"
-              step="0.01"
+              inputMode="decimal"
+              step="any"
               value={capitalCashUsd}
               onChange={(e) => setCapitalCashUsd(e.target.value)}
               className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tabular-nums"
@@ -402,7 +414,8 @@ export const SettingsView: React.FC = () => {
             </label>
             <input
               type="number"
-              step="100"
+              inputMode="decimal"
+              step="any"
               value={capitalCashKhr}
               onChange={(e) => setCapitalCashKhr(e.target.value)}
               className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm font-mono tabular-nums"
@@ -648,32 +661,61 @@ export const SettingsView: React.FC = () => {
               {t('settings.importDemoDesc')}
             </p>
           </div>
-          <button
-            type="button"
-            disabled={importingDemo}
-            onClick={async () => {
-              setImportingDemo(true);
-              setAuthError('');
-              try {
-                const added = await importDemoData();
-                showToast(
-                  added > 0
-                    ? t('settings.importDemoSuccess')
-                    : t('settings.importDemoAlreadyLoaded')
-                );
-              } catch (err) {
-                setAuthError(err instanceof Error ? err.message : 'Failed to import demo data');
-              } finally {
-                setImportingDemo(false);
-              }
-            }}
-            className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 px-4 py-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-950/70 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
-          >
-            <Database className="w-4 h-4 shrink-0" />
-            <span>
-              {importingDemo ? t('settings.importingDemo') : t('settings.importDemoButton')}
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              disabled={importingDemo || clearingDemo}
+              onClick={async () => {
+                setImportingDemo(true);
+                setAuthError('');
+                try {
+                  const added = await importDemoData();
+                  showToast(
+                    added > 0
+                      ? t('settings.importDemoSuccess')
+                      : t('settings.importDemoAlreadyLoaded')
+                  );
+                } catch (err) {
+                  setAuthError(err instanceof Error ? err.message : 'Failed to import demo data');
+                } finally {
+                  setImportingDemo(false);
+                }
+              }}
+              className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 px-4 py-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-950/70 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
+            >
+              <Database className="w-4 h-4 shrink-0" />
+              <span>
+                {importingDemo ? t('settings.importingDemo') : t('settings.importDemoButton')}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              disabled={importingDemo || clearingDemo || !hasDemoData}
+              onClick={async () => {
+                setClearingDemo(true);
+                setAuthError('');
+                try {
+                  const removed = await clearDemoData();
+                  showToast(
+                    removed > 0
+                      ? t('settings.clearDemoSuccess')
+                      : t('settings.clearDemoNothing')
+                  );
+                } catch (err) {
+                  setAuthError(err instanceof Error ? err.message : 'Failed to clean demo data');
+                } finally {
+                  setClearingDemo(false);
+                }
+              }}
+              className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl border border-red-200 dark:border-red-900/50 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-45 transition-colors shrink-0 whitespace-nowrap"
+            >
+              <Trash2 className="w-4 h-4 shrink-0" />
+              <span>
+                {clearingDemo ? t('settings.clearingDemo') : t('settings.clearDemoButton')}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
