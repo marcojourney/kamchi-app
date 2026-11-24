@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
   Bell,
@@ -16,9 +16,28 @@ import {
   formatCurrency,
   formatDateLocalized,
 } from '../lib/finance';
+import type { AgingBucketKey } from '../lib/finance';
 import { exportElementToPdf, exportLoansAndPaymentsToExcel } from '../lib/pdfExport';
+import type { Loan } from '../types/loan';
+import { ArrearsView } from './ArrearsView';
 
-export const RemindersReportsView: React.FC = () => {
+export type ReportsSubTab = 'reminders' | 'reports' | 'arrears' | 'audit';
+
+interface RemindersReportsViewProps {
+  subTabRequest?: {
+    tab: ReportsSubTab;
+    bucket?: AgingBucketKey | null;
+    seq: number;
+  } | null;
+  onSelectLoanForPayment: (loan: Loan) => void;
+  onOpenLoanDetail: (loanId: string) => void;
+}
+
+export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
+  subTabRequest = null,
+  onSelectLoanForPayment,
+  onOpenLoanDetail,
+}) => {
   const { t, i18n } = useTranslation();
   const { user, profile, borrowers, loans, schedulesByLoan, payments, auditLogs, todayIso } =
     useApp();
@@ -28,7 +47,16 @@ export const RemindersReportsView: React.FC = () => {
   const displayCurrency = profile?.defaultCurrency || 'USD';
   const rate = profile?.exchangeRateKhr || 4100;
 
-  const [tab, setTab] = useState<'reminders' | 'reports' | 'audit'>('reminders');
+  const [tab, setTab] = useState<ReportsSubTab>(subTabRequest?.tab || 'reminders');
+  const [arrearsInitialBucket, setArrearsInitialBucket] = useState<AgingBucketKey | null>(
+    subTabRequest?.bucket ?? null
+  );
+
+  useEffect(() => {
+    if (!subTabRequest) return;
+    setTab(subTabRequest.tab);
+    setArrearsInitialBucket(subTabRequest.bucket ?? null);
+  }, [subTabRequest?.seq]);
   const [pushReady, setPushReady] = useState(
     typeof Notification !== 'undefined' && Notification.permission === 'granted'
   );
@@ -171,19 +199,23 @@ export const RemindersReportsView: React.FC = () => {
           {t('reports.title')}
         </h1>
 
-        <div className="w-full grid grid-cols-3 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+        <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           {(
             [
               { id: 'reminders', label: t('reports.tabReminders') },
               { id: 'reports', label: t('reports.tabReports') },
+              { id: 'arrears', label: t('nav.arrears') },
               { id: 'audit', label: t('reports.tabAudit') },
             ] as const
           ).map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => setTab(item.id)}
-              className={`w-full min-h-[40px] px-2 sm:px-3 rounded-lg text-xs font-semibold text-center truncate transition-colors ${
+              onClick={() => {
+                if (item.id === 'arrears') setArrearsInitialBucket(null);
+                setTab(item.id);
+              }}
+              className={`w-full min-h-[40px] px-1.5 sm:px-3 rounded-lg text-xs font-semibold text-center truncate transition-colors ${
                 tab === item.id
                   ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs'
                   : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -409,6 +441,15 @@ export const RemindersReportsView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {tab === 'arrears' && (
+        <ArrearsView
+          embedded
+          initialBucket={arrearsInitialBucket}
+          onSelectLoanForPayment={onSelectLoanForPayment}
+          onOpenLoanDetail={onOpenLoanDetail}
+        />
       )}
 
       {tab === 'audit' && (

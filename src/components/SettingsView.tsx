@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2,
   Camera,
+  Cloud,
   Download,
+  HardDrive,
   Image as ImageIcon,
   Lock,
   LogOut,
   Moon,
   Phone,
   Plus,
+  ShieldCheck,
   Sun,
   Trash2,
   Upload,
@@ -16,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { compressLogoToDataUrl } from '../lib/finance';
 import type { AppLanguage, CurrencyCode } from '../types/loan';
 import { CameraCaptureModal } from './CameraCaptureModal';
@@ -23,7 +27,10 @@ import { PWAInstallButton } from './PWAInstallButton';
 
 export const SettingsView: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const isOnline = useOnlineStatus();
   const {
+    user,
+    isLocalMode,
     profile,
     theme,
     toggleTheme,
@@ -35,8 +42,11 @@ export const SettingsView: React.FC = () => {
     deleteStaffMember,
     exportAllDataJson,
     importAllDataJson,
+    signInWithGoogle,
     signOut,
   } = useApp();
+  const [signingIn, setSigningIn] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   const [lenderName, setLenderName] = useState(profile?.displayName || '');
   const [lenderPhone, setLenderPhone] = useState(profile?.lenderPhone || '');
@@ -560,16 +570,69 @@ export const SettingsView: React.FC = () => {
           </label>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <span className="text-xs text-slate-500">{profile?.email}</span>
-          <button
-            type="button"
-            onClick={signOut}
-            className="min-h-[40px] flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900/50 px-3.5 py-2 text-xs font-semibold text-red-600"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>{t('auth.signOut')}</span>
-          </button>
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-3">
+          {isLocalMode || !user ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  <HardDrive className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>{t('settings.localModeBadge')}</span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('settings.localModeDesc')}
+                </p>
+                {!isOnline && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                    {t('settings.signInOfflineHint')}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={signingIn || !isOnline}
+                onClick={async () => {
+                  setSigningIn(true);
+                  setAuthError('');
+                  try {
+                    await signInWithGoogle();
+                  } catch (err) {
+                    setAuthError(err instanceof Error ? err.message : 'Sign-in failed');
+                  } finally {
+                    setSigningIn(false);
+                  }
+                }}
+                className="min-h-[40px] flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
+              >
+                <ShieldCheck className="w-4 h-4 shrink-0" />
+                <span>{signingIn ? t('auth.signingIn') : t('auth.signInGoogle')}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <Cloud className="w-4 h-4 shrink-0" />
+                  <span>{t('settings.cloudSyncedBadge')}</span>
+                </div>
+                <span className="text-xs text-slate-500 dark:text-slate-400 block">
+                  {profile?.email || user.email}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={signOut}
+                className="min-h-[40px] flex items-center gap-1.5 rounded-xl border border-red-200 dark:border-red-900/50 px-3.5 py-2 text-xs font-semibold text-red-600"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>{t('auth.signOut')}</span>
+              </button>
+            </div>
+          )}
+
+          {authError && (
+            <p className="text-xs text-red-600 dark:text-red-400">{authError}</p>
+          )}
         </div>
       </div>
 

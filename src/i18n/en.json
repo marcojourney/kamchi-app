@@ -3,6 +3,7 @@
     "name": "KamChi",
     "subtitle": "Personal Loan & Portfolio Manager",
     "offlineBanner": "Offline Mode — Changes sync automatically when connected.",
+    "offlineLocalBanner": "Offline Mode — Data is saved locally on this device.",
     "installApp": "Install App",
     "installIos": "Install on iOS",
     "iosTitle": "Install on iPhone / iPad",
@@ -286,7 +287,11 @@
     "importBackup": "Restore from Backup File",
     "importSuccess": "Backup restored successfully.",
     "saveSettings": "Save Settings",
-    "savedToast": "Settings saved"
+    "savedToast": "Settings saved",
+    "localModeBadge": "Local Offline Mode (No Login Required)",
+    "localModeDesc": "All borrowers, loans, receipts, and schedules are stored on this device. Optional: sign in with Google to sync to the cloud.",
+    "cloudSyncedBadge": "Cloud Synced with Google",
+    "signInOfflineHint": "Connect to the internet if you want to sign in with Google."
   },
   "portal": {
     "title": "Borrower Loan Summary",

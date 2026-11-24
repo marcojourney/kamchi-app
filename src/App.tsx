@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AlertTriangle,
   BarChart3,
   FileSpreadsheet,
   Globe,
@@ -10,8 +9,6 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppProvider, useApp } from './context/AppContext';
-import { ArrearsView } from './components/ArrearsView';
-import { AuthScreen } from './components/AuthScreen';
 import { BorrowerPortalView } from './components/BorrowerPortalView';
 import { BorrowersView } from './components/BorrowersView';
 import { CreateLoanModal } from './components/CreateLoanModal';
@@ -24,18 +21,23 @@ import { PWAInstallButton } from './components/PWAInstallButton';
 import { ReceiptModal } from './components/ReceiptModal';
 import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { RemindersReportsView } from './components/RemindersReportsView';
+import type { ReportsSubTab } from './components/RemindersReportsView';
 import { SettingsView } from './components/SettingsView';
 import type { AgingBucketKey } from './lib/finance';
 import type { Loan, Payment } from './types/loan';
 
-type NavTab = 'dashboard' | 'loans' | 'arrears' | 'borrowers' | 'reports' | 'settings';
+type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'settings';
 
 const MainShell: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { user, authReady, isPinLocked, profile, updateSettings } = useApp();
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  const [arrearsInitialBucket, setArrearsInitialBucket] = useState<AgingBucketKey | null>(null);
+  const [reportsSubTabRequest, setReportsSubTabRequest] = useState<{
+    tab: ReportsSubTab;
+    bucket?: AgingBucketKey | null;
+    seq: number;
+  } | null>(null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [showCreateLoan, setShowCreateLoan] = useState<{ open: boolean; borrowerId?: string }>({
     open: false,
@@ -64,10 +66,6 @@ const MainShell: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <AuthScreen />;
-  }
-
   if (isPinLocked) {
     return <PinLockModal />;
   }
@@ -75,14 +73,13 @@ const MainShell: React.FC = () => {
   const navItems: Array<{ id: NavTab; label: string; icon: React.FC<{ className?: string }> }> = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: Home },
     { id: 'loans', label: t('nav.loans'), icon: FileSpreadsheet },
-    { id: 'arrears', label: t('nav.arrears'), icon: AlertTriangle },
     { id: 'borrowers', label: t('nav.borrowers'), icon: Users },
     { id: 'reports', label: t('nav.reports'), icon: BarChart3 },
     { id: 'settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const profileDisplayName =
-    profile?.displayName || user.displayName || t('app.name');
+    profile?.displayName || user?.displayName || t('app.name');
   const safeLenderLogo =
     profile?.lenderLogoDataUrl && profile.lenderLogoDataUrl.startsWith('data:image/')
       ? profile.lenderLogoDataUrl
@@ -112,7 +109,10 @@ const MainShell: React.FC = () => {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if (item.id === 'reports') setReportsSubTabRequest(null);
+                    setActiveTab(item.id);
+                  }}
                   className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
                     active
                       ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-semibold'
@@ -191,7 +191,7 @@ const MainShell: React.FC = () => {
                   alt={profileDisplayName}
                   className="h-full w-full object-cover"
                 />
-              ) : user.photoURL ? (
+              ) : user?.photoURL ? (
                 <img
                   src={user.photoURL}
                   alt={profileDisplayName}
@@ -221,8 +221,12 @@ const MainShell: React.FC = () => {
                 setActiveTab('loans');
               }}
               onOpenArrears={(bucket = null) => {
-                setArrearsInitialBucket(bucket);
-                setActiveTab('arrears');
+                setReportsSubTabRequest({
+                  tab: 'arrears',
+                  bucket,
+                  seq: Date.now(),
+                });
+                setActiveTab('reports');
               }}
             />
           )}
@@ -233,17 +237,6 @@ const MainShell: React.FC = () => {
               onSelectLoanId={setSelectedLoanId}
               onNewLoan={() => setShowCreateLoan({ open: true })}
               onRecordPayment={(loan) => setPaymentLoan(loan)}
-            />
-          )}
-
-          {activeTab === 'arrears' && (
-            <ArrearsView
-              initialBucket={arrearsInitialBucket}
-              onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
-              onOpenLoanDetail={(loanId) => {
-                setSelectedLoanId(loanId);
-                setActiveTab('loans');
-              }}
             />
           )}
 
@@ -261,13 +254,22 @@ const MainShell: React.FC = () => {
             />
           )}
 
-          {activeTab === 'reports' && <RemindersReportsView />}
+          {activeTab === 'reports' && (
+            <RemindersReportsView
+              subTabRequest={reportsSubTabRequest}
+              onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
+              onOpenLoanDetail={(loanId) => {
+                setSelectedLoanId(loanId);
+                setActiveTab('loans');
+              }}
+            />
+          )}
 
           {activeTab === 'settings' && <SettingsView />}
         </main>
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 grid grid-cols-6 h-16 pb-safe">
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 grid grid-cols-5 h-16 pb-safe">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
@@ -276,17 +278,17 @@ const MainShell: React.FC = () => {
                 key={item.id}
                 type="button"
                 onClick={() => {
-                  if (item.id === 'arrears') setArrearsInitialBucket(null);
+                  if (item.id === 'reports') setReportsSubTabRequest(null);
                   setActiveTab(item.id);
                 }}
-                className={`flex flex-col items-center justify-center min-h-[44px] px-0.5 transition-colors ${
+                className={`flex flex-col items-center justify-center min-h-[44px] px-1 transition-colors ${
                   active
                     ? 'text-teal-600 dark:text-teal-400'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-[10px] font-medium mt-0.5 truncate max-w-full">
+                <Icon className="w-5 h-5" />
+                <span className="text-[11px] font-medium mt-0.5 truncate max-w-full">
                   {item.label}
                 </span>
               </button>
@@ -330,15 +332,22 @@ const MainShell: React.FC = () => {
 };
 
 export default function App() {
-  const portalShareId = useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    return new URLSearchParams(window.location.search).get('portal');
+  const portalParams = useMemo(() => {
+    if (typeof window === 'undefined') return { shareId: null, encodedData: null };
+    const params = new URLSearchParams(window.location.search);
+    return {
+      shareId: params.get('portal'),
+      encodedData: params.get('portalData'),
+    };
   }, []);
 
-  if (portalShareId) {
+  if (portalParams.shareId || portalParams.encodedData) {
     return (
       <ErrorBoundary>
-        <BorrowerPortalView shareId={portalShareId} />
+        <BorrowerPortalView
+          shareId={portalParams.shareId}
+          encodedData={portalParams.encodedData}
+        />
       </ErrorBoundary>
     );
   }

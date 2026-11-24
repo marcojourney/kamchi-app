@@ -1,6 +1,11 @@
 {
-  "name": "RielLedger",
+  "name": "KAMCHI",
   "description": "Mobile-first personal loan manager PWA with bilingual English & Khmer support, USD/KHR multi-currency, repayment schedules, receipts, reports, and AI insights.",
-  "requestFramePermissions": ["geolocation", "camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

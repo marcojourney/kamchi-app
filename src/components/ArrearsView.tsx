@@ -13,6 +13,7 @@ import type { CurrencyCode, Loan } from '../types/loan';
 
 interface ArrearsViewProps {
   initialBucket?: AgingBucketKey | null;
+  embedded?: boolean;
   onSelectLoanForPayment: (loan: Loan) => void;
   onOpenLoanDetail: (loanId: string) => void;
 }
@@ -30,6 +31,7 @@ const BUCKET_ORDER: AgingBucketKey[] = ['1_7', '8_30', '31_90', '90_plus'];
 
 export const ArrearsView: React.FC<ArrearsViewProps> = ({
   initialBucket = null,
+  embedded = false,
   onSelectLoanForPayment,
   onOpenLoanDetail,
 }) => {
@@ -195,10 +197,18 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {t('arrears.title')}
-          </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          {!embedded && (
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {t('arrears.title')}
+            </h1>
+          )}
+          <p
+            className={
+              embedded
+                ? 'text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300'
+                : 'text-xs text-slate-500 dark:text-slate-400 mt-0.5'
+            }
+          >
             {t('arrears.subtitle')}
           </p>
         </div>

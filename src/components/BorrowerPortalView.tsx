@@ -4,6 +4,7 @@ import { FileSpreadsheet, FileText, Globe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../lib/firebase';
 import { formatCurrency, formatDateLocalized } from '../lib/finance';
+import { decodePortalData } from '../lib/localStore';
 import {
   buildCustomerScheduleInputFromPortal,
   exportLoanScheduleExcel,
@@ -11,7 +12,10 @@ import {
 } from '../lib/pdfExport';
 import type { PortalShare } from '../types/loan';
 
-export const BorrowerPortalView: React.FC<{ shareId: string }> = ({ shareId }) => {
+export const BorrowerPortalView: React.FC<{
+  shareId?: string | null;
+  encodedData?: string | null;
+}> = ({ shareId, encodedData }) => {
   const { t, i18n } = useTranslation();
   const [data, setData] = useState<PortalShare | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,6 +26,24 @@ export const BorrowerPortalView: React.FC<{ shareId: string }> = ({ shareId }) =
   useEffect(() => {
     let active = true;
     (async () => {
+      if (encodedData) {
+        const decoded = decodePortalData<PortalShare>(encodedData);
+        if (!active) return;
+        if (!decoded || !Array.isArray(decoded.schedules)) {
+          setNotFound(true);
+        } else {
+          setData(decoded);
+        }
+        setLoading(false);
+        return;
+      }
+      if (!shareId) {
+        if (active) {
+          setNotFound(true);
+          setLoading(false);
+        }
+        return;
+      }
       try {
         const snap = await getDoc(doc(db, 'portalShares', shareId));
         if (!active) return;
@@ -39,7 +61,7 @@ export const BorrowerPortalView: React.FC<{ shareId: string }> = ({ shareId }) =
     return () => {
       active = false;
     };
-  }, [shareId]);
+  }, [shareId, encodedData]);
 
   const toggleLanguage = () => {
     const next = lang === 'km' ? 'en' : 'km';

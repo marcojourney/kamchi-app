@@ -29,6 +29,14 @@ import {
   hashPinSha256,
   roundMoney,
 } from '../lib/finance';
+import {
+  createDefaultLocalWorkspace,
+  encodePortalData,
+  loadLocalWorkspace,
+  LOCAL_UID,
+  saveLocalWorkspace,
+  type LocalWorkspaceData,
+} from '../lib/localStore';
 import type {
   AppLanguage,
   AuditLog,
@@ -93,6 +101,7 @@ export interface RecordPaymentInput {
 
 interface AppContextValue {
   user: User | null;
+  isLocalMode: boolean;
   authReady: boolean;
   profile: UserProfile | null;
   isPinLocked: boolean;
@@ -146,6 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { i18n } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [localLoaded, setLocalLoaded] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isPinLocked, setIsPinLocked] = useState(false);
   const [pinVerifiedSession, setPinVerifiedSession] = useState(false);
@@ -163,6 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
 
+  const localWorkspaceRef = React.useRef<LocalWorkspaceData>(createDefaultLocalWorkspace());
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   useEffect(() => {
@@ -184,27 +195,174 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.lang = lang;
   }, [profile?.preferredLang, i18n]);
 
-  // Auth listener
+  const applyLocalWorkspaceState = useCallback(
+    (ws: LocalWorkspaceData, verifiedPin: boolean) => {
+      localWorkspaceRef.current = ws;
+      setProfile(ws.profile);
+      setBorrowers([...ws.borrowers].sort((a, b) => a.name.localeCompare(b.name)));
+      setLoans([...ws.loans].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')));
+      setSchedulesByLoan(ws.schedulesByLoan);
+      setPayments([...ws.payments].sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || '')));
+      setStaff([...ws.staff].sort((a, b) => a.name.localeCompare(b.name)));
+      setAuditLogs(ws.auditLogs.slice(0, 100));
+      setIsPinLocked(Boolean(ws.profile.pinHash && !verifiedPin));
+    },
+    []
+  );
+
+  const commitLocal = useCallback(
+    async (updater: (prev: LocalWorkspaceData) => LocalWorkspaceData, markPendingSync = true) => {
+      const updated = updater(localWorkspaceRef.current);
+      const next: LocalWorkspaceData = {
+        ...updated,
+        hasPendingSync: markPendingSync ? true : updated.hasPendingSync,
+      };
+      localWorkspaceRef.current = next;
+      setProfile(next.profile);
+      setBorrowers([...next.borrowers].sort((a, b) => a.name.localeCompare(b.name)));
+      setLoans([...next.loans].sort((a, b) => (b.startDate || '').localeCompare(a.startDate || '')));
+      setSchedulesByLoan(next.schedulesByLoan);
+      setPayments([...next.payments].sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || '')));
+      setStaff([...next.staff].sort((a, b) => a.name.localeCompare(b.name)));
+      setAuditLogs(next.auditLogs.slice(0, 100));
+      await saveLocalWorkspace(next);
+    },
+    []
+  );
+
+  // Auth listener (supports unauthenticated Local/Offline Mode seamlessly)
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setAuthReady(true);
       if (!firebaseUser) {
-        setProfile(null);
-        setBorrowers([]);
-        setLoans([]);
-        setSchedulesByLoan({});
-        setPayments([]);
-        setStaff([]);
-        setAuditLogs([]);
-        setIsPinLocked(false);
         setPinVerifiedSession(false);
+        setLocalLoaded(false);
       }
     });
     return unsub;
   }, []);
 
-  // Ensure user profile exists & listen to user profile
+  // Load Local/Offline workspace whenever user is not signed in with Google
+  useEffect(() => {
+    if (!authReady || user) return;
+    let active = true;
+    const fallbackLang: AppLanguage = i18n.language.startsWith('km') ? 'km' : 'en';
+    loadLocalWorkspace(fallbackLang).then((ws) => {
+      if (!active) return;
+      applyLocalWorkspaceState(ws, pinVerifiedSession);
+      setLocalLoaded(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [authReady, user, applyLocalWorkspaceState, pinVerifiedSession, i18n.language]);
+
+  // Migrate pending local offline records to Firestore when user signs in with Google
+  useEffect(() => {
+    if (!authReady || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const localWs = await loadLocalWorkspace();
+        if (cancelled) return;
+        const hasData =
+          localWs.hasPendingSync &&
+          (localWs.borrowers.length > 0 ||
+            localWs.loans.length > 0 ||
+            localWs.payments.length > 0 ||
+            localWs.staff.length > 0);
+        if (!hasData) return;
+
+        const ops: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+        for (const b of localWs.borrowers) {
+          ops.push((batch) =>
+            batch.set(
+              doc(db, 'borrowers', b.id),
+              {
+                ...b,
+                ownerId: user.uid,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+        for (const l of localWs.loans) {
+          ops.push((batch) =>
+            batch.set(
+              doc(db, 'loans', l.id),
+              {
+                ...l,
+                ownerId: user.uid,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+          for (const s of localWs.schedulesByLoan[l.id] || []) {
+            ops.push((batch) =>
+              batch.set(
+                doc(db, 'loans', l.id, 'schedules', s.id),
+                {
+                  ...s,
+                  ownerId: user.uid,
+                  updatedAt: serverTimestamp(),
+                },
+                { merge: true }
+              )
+            );
+          }
+        }
+        for (const p of localWs.payments) {
+          ops.push((batch) =>
+            batch.set(
+              doc(db, 'payments', p.id),
+              {
+                ...p,
+                ownerId: user.uid,
+                createdAt: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+        for (const st of localWs.staff) {
+          ops.push((batch) =>
+            batch.set(
+              doc(db, 'staff', st.id),
+              {
+                ...st,
+                ownerId: user.uid,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              },
+              { merge: true }
+            )
+          );
+        }
+
+        for (let i = 0; i < ops.length; i += 400) {
+          const batch = writeBatch(db);
+          for (const fn of ops.slice(i, i + 400)) {
+            fn(batch);
+          }
+          await batch.commit();
+        }
+
+        await saveLocalWorkspace({ ...localWs, hasPendingSync: false });
+      } catch (err) {
+        console.warn('Local-to-cloud sync skipped:', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, user]);
+
+  // Ensure user profile exists & listen to user profile when signed in with Google
   useEffect(() => {
     if (!authReady || !user) return;
     const userRef = doc(db, 'users', user.uid);
@@ -214,20 +372,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userRef,
       async (snap) => {
         if (!snap.exists()) {
-          const newProfile = {
+          const localProfile = localWorkspaceRef.current.profile;
+          const newProfile: Record<string, unknown> = {
             uid: user.uid,
             email: (user.email || 'owner@example.com').slice(0, 200),
-            displayName: (user.displayName || user.email?.split('@')[0] || 'Lender').slice(0, 120),
-            preferredLang: detectedLang,
-            defaultCurrency: 'USD' as CurrencyCode,
-            exchangeRateKhr: 4100,
-            capitalCashUsd: 0,
-            capitalCashKhr: 0,
-            useKhmerNumerals: false,
-            biometricEnabled: false,
+            displayName: (
+              (localProfile.displayName && localProfile.displayName !== 'KamChi Lender'
+                ? localProfile.displayName
+                : user.displayName) ||
+              user.email?.split('@')[0] ||
+              'Lender'
+            ).slice(0, 120),
+            preferredLang: localProfile.preferredLang || detectedLang,
+            defaultCurrency: localProfile.defaultCurrency || ('USD' as CurrencyCode),
+            exchangeRateKhr: localProfile.exchangeRateKhr || 4100,
+            capitalCashUsd: localProfile.capitalCashUsd || 0,
+            capitalCashKhr: localProfile.capitalCashKhr || 0,
+            useKhmerNumerals: Boolean(localProfile.useKhmerNumerals),
+            biometricEnabled: Boolean(localProfile.biometricEnabled),
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           };
+          if (localProfile.lenderPhone) {
+            newProfile.lenderPhone = localProfile.lenderPhone.slice(0, 40);
+          }
+          if (localProfile.lenderLogoDataUrl) {
+            newProfile.lenderLogoDataUrl = localProfile.lenderLogoDataUrl.slice(0, 200000);
+          }
           try {
             await setDoc(userRef, newProfile);
           } catch (error) {
@@ -353,7 +524,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const ensureSchedulesLoaded = useCallback(
     async (loanId: string) => {
-      if (!user || schedulesByLoan[loanId]) return;
+      if (schedulesByLoan[loanId]) return;
+      if (!user) return;
       const path = `loans/${loanId}/schedules`;
       try {
         const snap = await getDocs(
@@ -376,14 +548,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       entityId: string,
       summary: string
     ) => {
-      if (!user) return;
       const logId = generateSafeId('log');
+      const actorName = (
+        profile?.displayName ||
+        user?.displayName ||
+        user?.email ||
+        'Lender'
+      ).slice(0, 120);
+
+      if (!user) {
+        const entry: AuditLog = {
+          id: logId,
+          ownerId: LOCAL_UID,
+          actorUid: LOCAL_UID,
+          actorName,
+          action: action.slice(0, 60),
+          entityType,
+          entityId: entityId.slice(0, 128),
+          summary: summary.slice(0, 300),
+          createdAt: new Date().toISOString(),
+        };
+        await commitLocal((prev) => ({
+          ...prev,
+          auditLogs: [entry, ...prev.auditLogs].slice(0, 100),
+        }));
+        return;
+      }
+
       const path = `auditLogs/${logId}`;
       try {
         await setDoc(doc(db, 'auditLogs', logId), {
           ownerId: user.uid,
           actorUid: user.uid,
-          actorName: (profile?.displayName || user.displayName || user.email || 'Owner').slice(0, 120),
+          actorName,
           action: action.slice(0, 60),
           entityType,
           entityId: entityId.slice(0, 128),
@@ -394,7 +591,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.CREATE, path);
       }
     },
-    [user, profile?.displayName]
+    [user, profile?.displayName, commitLocal]
   );
 
   const signInWithGoogle = useCallback(async () => {
@@ -402,13 +599,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const signOut = useCallback(async () => {
+    if (!user) return;
     await firebaseSignOut(auth);
-  }, []);
+  }, [user]);
 
   const unlockWithPin = useCallback(
     async (pin: string) => {
-      if (!user || !profile?.pinHash) return false;
-      const h = await hashPinSha256(pin, user.uid);
+      if (!profile?.pinHash) return false;
+      const ownerId = user?.uid || LOCAL_UID;
+      const h = await hashPinSha256(pin, ownerId);
       if (h === profile.pinHash) {
         setPinVerifiedSession(true);
         setIsPinLocked(false);
@@ -426,11 +625,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateSettings = useCallback(
     async (updates: Partial<UserProfile>) => {
-      if (!user || !profile) return;
-      const path = `users/${user.uid}`;
+      if (!profile) return;
       const nextDisplayName = (updates.displayName ?? profile.displayName ?? '')
         .trim()
         .slice(0, 120);
+
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            displayName: nextDisplayName || prev.profile.displayName || 'KamChi Lender',
+            preferredLang: updates.preferredLang ?? prev.profile.preferredLang,
+            defaultCurrency: updates.defaultCurrency ?? prev.profile.defaultCurrency,
+            exchangeRateKhr: Number(updates.exchangeRateKhr ?? prev.profile.exchangeRateKhr) || 4100,
+            capitalCashUsd: Number(updates.capitalCashUsd ?? prev.profile.capitalCashUsd ?? 0),
+            capitalCashKhr: Number(updates.capitalCashKhr ?? prev.profile.capitalCashKhr ?? 0),
+            useKhmerNumerals: Boolean(updates.useKhmerNumerals ?? prev.profile.useKhmerNumerals ?? false),
+            biometricEnabled: Boolean(updates.biometricEnabled ?? prev.profile.biometricEnabled ?? false),
+            lenderPhone:
+              updates.lenderPhone !== undefined
+                ? updates.lenderPhone.trim().slice(0, 40)
+                : prev.profile.lenderPhone,
+            lenderLogoDataUrl:
+              updates.lenderLogoDataUrl !== undefined
+                ? updates.lenderLogoDataUrl.slice(0, 200000)
+                : prev.profile.lenderLogoDataUrl,
+            pinHash: updates.pinHash !== undefined ? updates.pinHash : prev.profile.pinHash,
+            updatedAt: new Date().toISOString(),
+          },
+        }));
+        await writeAuditLog('update_settings', 'settings', LOCAL_UID, 'Updated workspace settings');
+        return;
+      }
+
+      const path = `users/${user.uid}`;
       const payload: Record<string, unknown> = {
         displayName: nextDisplayName || profile.displayName || 'KamChi Lender',
         preferredLang: updates.preferredLang ?? profile.preferredLang,
@@ -462,12 +691,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, path);
       }
     },
-    [user, profile, writeAuditLog]
+    [user, profile, writeAuditLog, commitLocal]
   );
 
   const setPinCode = useCallback(
     async (pin: string | null) => {
-      if (!user) return;
+      if (!user) {
+        const hash = pin ? await hashPinSha256(pin, LOCAL_UID) : '';
+        await commitLocal((prev) => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            pinHash: hash,
+            updatedAt: new Date().toISOString(),
+          },
+        }));
+        if (pin) setPinVerifiedSession(true);
+        return;
+      }
+
       const path = `users/${user.uid}`;
       try {
         if (!pin) {
@@ -487,13 +729,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, path);
       }
     },
-    [user]
+    [user, commitLocal]
   );
 
   const createBorrower = useCallback(
     async (input: CreateBorrowerInput) => {
-      if (!user) throw new Error('Not authenticated');
       const id = generateSafeId('brw');
+      const nowIso = new Date().toISOString();
+
+      if (!user) {
+        const newBorrower: Borrower = {
+          id,
+          ownerId: LOCAL_UID,
+          name: input.name.trim().slice(0, 120),
+          phone: input.phone.trim().slice(0, 40),
+          tags: cleanTags(input.tags),
+          riskScore: 85,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        if (input.address?.trim()) newBorrower.address = input.address.trim().slice(0, 300);
+        if (input.nationalIdNumber?.trim()) {
+          newBorrower.nationalIdNumber = input.nationalIdNumber.trim().slice(0, 60);
+        }
+        if (input.idPhotoDataUrl) newBorrower.idPhotoDataUrl = input.idPhotoDataUrl.slice(0, 250000);
+        if (input.borrowerPhotoDataUrl) {
+          newBorrower.borrowerPhotoDataUrl = input.borrowerPhotoDataUrl.slice(0, 200000);
+        }
+        if (input.guarantorName?.trim()) {
+          newBorrower.guarantorName = input.guarantorName.trim().slice(0, 120);
+        }
+        if (input.guarantorPhone?.trim()) {
+          newBorrower.guarantorPhone = input.guarantorPhone.trim().slice(0, 40);
+        }
+        if (input.guarantorPhotoDataUrl) {
+          newBorrower.guarantorPhotoDataUrl = input.guarantorPhotoDataUrl.slice(0, 200000);
+        }
+        if (input.notes?.trim()) newBorrower.notes = input.notes.trim().slice(0, 1000);
+
+        await commitLocal((prev) => ({
+          ...prev,
+          borrowers: [...prev.borrowers, newBorrower],
+        }));
+        await writeAuditLog('create_borrower', 'borrower', id, `Added borrower ${newBorrower.name}`);
+        return id;
+      }
+
       const path = `borrowers/${id}`;
       const payload: Record<string, unknown> = {
         ownerId: user.uid,
@@ -521,14 +802,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.CREATE, path);
       }
     },
-    [user, writeAuditLog]
+    [user, writeAuditLog, commitLocal]
   );
 
   const updateBorrower = useCallback(
     async (id: string, input: Partial<CreateBorrowerInput>) => {
-      if (!user) return;
       const existing = borrowers.find((b) => b.id === id);
       if (!existing) return;
+
+      if (!user) {
+        const updatedBorrower: Borrower = {
+          ...existing,
+          name: (input.name ?? existing.name).trim().slice(0, 120),
+          phone: (input.phone ?? existing.phone).trim().slice(0, 40),
+          tags: cleanTags(input.tags ?? existing.tags),
+          address: (input.address !== undefined ? input.address : existing.address)?.trim().slice(0, 300) || undefined,
+          nationalIdNumber:
+            (input.nationalIdNumber !== undefined
+              ? input.nationalIdNumber
+              : existing.nationalIdNumber
+            )?.trim().slice(0, 60) || undefined,
+          idPhotoDataUrl:
+            input.idPhotoDataUrl !== undefined
+              ? input.idPhotoDataUrl.slice(0, 250000)
+              : existing.idPhotoDataUrl,
+          borrowerPhotoDataUrl:
+            input.borrowerPhotoDataUrl !== undefined
+              ? input.borrowerPhotoDataUrl.slice(0, 200000)
+              : existing.borrowerPhotoDataUrl,
+          guarantorName:
+            (input.guarantorName !== undefined
+              ? input.guarantorName
+              : existing.guarantorName
+            )?.trim().slice(0, 120) || undefined,
+          guarantorPhone:
+            (input.guarantorPhone !== undefined
+              ? input.guarantorPhone
+              : existing.guarantorPhone
+            )?.trim().slice(0, 40) || undefined,
+          guarantorPhotoDataUrl:
+            input.guarantorPhotoDataUrl !== undefined
+              ? input.guarantorPhotoDataUrl.slice(0, 200000)
+              : existing.guarantorPhotoDataUrl,
+          notes: (input.notes !== undefined ? input.notes : existing.notes)?.trim().slice(0, 1000) || undefined,
+          updatedAt: new Date().toISOString(),
+        };
+        await commitLocal((prev) => ({
+          ...prev,
+          borrowers: prev.borrowers.map((b) => (b.id === id ? updatedBorrower : b)),
+        }));
+        await writeAuditLog('update_borrower', 'borrower', id, `Updated borrower ${updatedBorrower.name}`);
+        return;
+      }
+
       const path = `borrowers/${id}`;
       const payload: Record<string, unknown> = {
         name: (input.name ?? existing.name).trim().slice(0, 120),
@@ -566,12 +892,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, path);
       }
     },
-    [user, borrowers, writeAuditLog]
+    [user, borrowers, writeAuditLog, commitLocal]
   );
 
   const deleteBorrower = useCallback(
     async (id: string) => {
-      if (!user) return;
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          borrowers: prev.borrowers.filter((b) => b.id !== id),
+        }));
+        await writeAuditLog('delete_borrower', 'borrower', id, `Deleted borrower ${id}`);
+        return;
+      }
+
       const path = `borrowers/${id}`;
       try {
         await deleteDoc(doc(db, 'borrowers', id));
@@ -580,12 +914,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.DELETE, path);
       }
     },
-    [user, writeAuditLog]
+    [user, writeAuditLog, commitLocal]
   );
 
   const createLoan = useCallback(
     async (input: CreateLoanInput) => {
-      if (!user) throw new Error('Not authenticated');
       const borrower = borrowers.find((b) => b.id === input.borrowerId);
       if (!borrower) throw new Error('Borrower not found');
 
@@ -600,6 +933,84 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         startDate: input.startDate,
         currency: input.currency,
       });
+
+      if (!user) {
+        const nowIso = new Date().toISOString();
+        const newLoan: Loan = {
+          id: loanId,
+          ownerId: LOCAL_UID,
+          borrowerId: borrower.id,
+          borrowerName: borrower.name.slice(0, 120),
+          currency: input.currency,
+          principal: input.principal,
+          interestRate: input.interestRate,
+          interestType: input.interestType,
+          termCount: Math.round(input.termCount),
+          frequency: input.frequency,
+          startDate: input.startDate.slice(0, 30),
+          adminFee: Number(input.adminFee || 0),
+          lateFeeType: input.lateFeeType || 'fixed',
+          lateFeeValue: Number(input.lateFeeValue || 0),
+          gracePeriodDays: Math.round(Number(input.gracePeriodDays || 0)),
+          status: 'active',
+          totalPayable,
+          totalInterest,
+          paidPrincipal: 0,
+          paidInterest: 0,
+          paidPenalty: 0,
+          outstandingBalance: totalPayable,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        if (input.frequency === 'custom') {
+          newLoan.customIntervalDays = Math.max(1, Math.round(input.customIntervalDays || 10));
+        }
+        if (input.collateralText?.trim()) {
+          newLoan.collateralText = input.collateralText.trim().slice(0, 500);
+        }
+        if (input.collateralPhotoUrl) {
+          newLoan.collateralPhotoUrl = input.collateralPhotoUrl.slice(0, 250000);
+        }
+        if (input.signatureDataUrl) {
+          newLoan.signatureDataUrl = input.signatureDataUrl.slice(0, 120000);
+        }
+        if (input.parentLoanId) {
+          newLoan.parentLoanId = input.parentLoanId.slice(0, 128);
+        }
+
+        const localSchedules: LoanSchedule[] = schedules.map((sch) => ({
+          id: `inst_${sch.installmentNumber}`,
+          ownerId: LOCAL_UID,
+          loanId,
+          borrowerId: borrower.id,
+          installmentNumber: sch.installmentNumber,
+          dueDate: sch.dueDate,
+          principalDue: sch.principalDue,
+          interestDue: sch.interestDue,
+          totalDue: sch.totalDue,
+          principalPaid: 0,
+          interestPaid: 0,
+          penaltyPaid: 0,
+          status: sch.dueDate < todayIso ? 'overdue' : 'pending',
+          updatedAt: nowIso,
+        }));
+
+        await commitLocal((prev) => ({
+          ...prev,
+          loans: [newLoan, ...prev.loans],
+          schedulesByLoan: {
+            ...prev.schedulesByLoan,
+            [loanId]: localSchedules,
+          },
+        }));
+        await writeAuditLog(
+          'create_loan',
+          'loan',
+          loanId,
+          `Issued ${input.currency} ${input.principal} loan to ${borrower.name}`
+        );
+        return loanId;
+      }
 
       const batch = writeBatch(db);
       const loanPayload: Record<string, unknown> = {
@@ -678,7 +1089,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.WRITE, `loans/${loanId}`);
       }
     },
-    [user, borrowers, todayIso, writeAuditLog]
+    [user, borrowers, todayIso, writeAuditLog, commitLocal]
   );
 
   const syncPortalIfShared = useCallback(
@@ -717,18 +1128,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const recordPayment = useCallback(
     async (input: RecordPaymentInput): Promise<Payment> => {
-      if (!user) throw new Error('Not authenticated');
       const loan = loans.find((l) => l.id === input.loanId);
       if (!loan) throw new Error('Loan not found');
 
       let schedules = schedulesByLoan[loan.id];
       if (!schedules) {
-        const snap = await getDocs(
-          query(collection(db, 'loans', loan.id, 'schedules'), where('ownerId', '==', user.uid))
-        );
-        schedules = snap.docs
-          .map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }))
-          .sort((a, b) => a.installmentNumber - b.installmentNumber);
+        if (!user) {
+          schedules = [];
+        } else {
+          const snap = await getDocs(
+            query(collection(db, 'loans', loan.id, 'schedules'), where('ownerId', '==', user.uid))
+          );
+          schedules = snap.docs
+            .map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }))
+            .sort((a, b) => a.installmentNumber - b.installmentNumber);
+        }
       }
 
       const allocation = allocatePaymentAcrossSchedules({
@@ -739,6 +1153,76 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       const paymentId = generateSafeId('pay');
+      const nowIso = new Date().toISOString();
+      const mergedSchedules = schedules.map((s) => {
+        const u = allocation.updatedSchedules.find((item) => item.id === s.id);
+        return u ? { ...s, ...u } : s;
+      });
+
+      const borrowerLoans = loans
+        .filter((l) => l.borrowerId === loan.borrowerId)
+        .map((l) => (l.id === loan.id ? { ...l, status: allocation.newStatus } : l));
+      const newScore = computeBorrowerRiskScore(
+        borrowerLoans,
+        { ...schedulesByLoan, [loan.id]: mergedSchedules },
+        todayIso
+      );
+
+      if (!user) {
+        const localPayment: Payment = {
+          id: paymentId,
+          ownerId: LOCAL_UID,
+          loanId: loan.id,
+          borrowerId: loan.borrowerId,
+          borrowerName: loan.borrowerName,
+          currency: loan.currency,
+          amount: input.amount,
+          principalPortion: allocation.principalPortion,
+          interestPortion: allocation.interestPortion,
+          penaltyPortion: allocation.penaltyPortion,
+          method: input.method,
+          paymentDate: input.paymentDate.slice(0, 30),
+          referenceNo: input.referenceNo?.trim().slice(0, 80) || undefined,
+          notes: input.notes?.trim().slice(0, 400) || undefined,
+          collectedBy: input.collectedBy?.trim().slice(0, 120) || undefined,
+          gpsLat: typeof input.gpsLat === 'number' ? input.gpsLat : undefined,
+          gpsLng: typeof input.gpsLng === 'number' ? input.gpsLng : undefined,
+          createdAt: nowIso,
+        };
+
+        await commitLocal((prev) => ({
+          ...prev,
+          payments: [localPayment, ...prev.payments],
+          loans: prev.loans.map((l) =>
+            l.id === loan.id
+              ? {
+                  ...l,
+                  paidPrincipal: allocation.newPaidPrincipal,
+                  paidInterest: allocation.newPaidInterest,
+                  paidPenalty: allocation.newPaidPenalty,
+                  outstandingBalance: allocation.newOutstandingBalance,
+                  status: allocation.newStatus,
+                  updatedAt: nowIso,
+                }
+              : l
+          ),
+          schedulesByLoan: {
+            ...prev.schedulesByLoan,
+            [loan.id]: mergedSchedules,
+          },
+          borrowers: prev.borrowers.map((b) =>
+            b.id === loan.borrowerId ? { ...b, riskScore: newScore, updatedAt: nowIso } : b
+          ),
+        }));
+        await writeAuditLog(
+          'record_payment',
+          'payment',
+          paymentId,
+          `Recorded ${loan.currency} ${input.amount} payment from ${loan.borrowerName}`
+        );
+        return localPayment;
+      }
+
       const paymentPayload: Record<string, unknown> = {
         ownerId: user.uid,
         loanId: loan.id,
@@ -792,21 +1276,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           `Recorded ${loan.currency} ${input.amount} payment from ${loan.borrowerName}`
         );
 
-        const mergedSchedules = schedules.map((s) => {
-          const u = allocation.updatedSchedules.find((item) => item.id === s.id);
-          return u ? { ...s, ...u } : s;
-        });
         await syncPortalIfShared(loan, allocation.newOutstandingBalance, allocation.newStatus, mergedSchedules);
 
-        // Update borrower reliability score
-        const borrowerLoans = loans.filter((l) => l.borrowerId === loan.borrowerId).map((l) =>
-          l.id === loan.id ? { ...l, status: allocation.newStatus } : l
-        );
-        const newScore = computeBorrowerRiskScore(
-          borrowerLoans,
-          { ...schedulesByLoan, [loan.id]: mergedSchedules },
-          todayIso
-        );
         await updateDoc(doc(db, 'borrowers', loan.borrowerId), {
           riskScore: newScore,
           updatedAt: serverTimestamp(),
@@ -835,7 +1306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.WRITE, `payments/${paymentId}`);
       }
     },
-    [user, loans, schedulesByLoan, todayIso, writeAuditLog, syncPortalIfShared]
+    [user, loans, schedulesByLoan, todayIso, writeAuditLog, syncPortalIfShared, commitLocal]
   );
 
   const earlySettleLoan = useCallback(
@@ -855,9 +1326,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const writeOffLoan = useCallback(
     async (loanId: string) => {
-      if (!user) return;
       const loan = loans.find((l) => l.id === loanId);
       if (!loan) return;
+
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          loans: prev.loans.map((l) =>
+            l.id === loanId ? { ...l, status: 'written_off', updatedAt: new Date().toISOString() } : l
+          ),
+        }));
+        await writeAuditLog('write_off_loan', 'loan', loanId, `Written off loan for ${loan.borrowerName}`);
+        return;
+      }
+
       const path = `loans/${loanId}`;
       try {
         await updateDoc(doc(db, 'loans', loanId), {
@@ -869,14 +1351,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, path);
       }
     },
-    [user, loans, writeAuditLog]
+    [user, loans, writeAuditLog, commitLocal]
   );
 
   const renewOrRestructureLoan = useCallback(
     async (oldLoanId: string, mode: 'renew' | 'topup' | 'restructure', newLoanInput: CreateLoanInput) => {
-      if (!user) throw new Error('Not authenticated');
       const oldLoan = loans.find((l) => l.id === oldLoanId);
       if (!oldLoan) throw new Error('Loan not found');
+
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          loans: prev.loans.map((l) =>
+            l.id === oldLoanId ? { ...l, status: 'renewed', updatedAt: new Date().toISOString() } : l
+          ),
+        }));
+        const newId = await createLoan({ ...newLoanInput, parentLoanId: oldLoanId });
+        await writeAuditLog(
+          `loan_${mode}`,
+          'loan',
+          newId,
+          `${mode.toUpperCase()} loan ${oldLoanId} -> ${newId} for ${oldLoan.borrowerName}`
+        );
+        return newId;
+      }
 
       try {
         await updateDoc(doc(db, 'loans', oldLoanId), {
@@ -895,26 +1393,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, `loans/${oldLoanId}`);
       }
     },
-    [user, loans, createLoan, writeAuditLog]
+    [user, loans, createLoan, writeAuditLog, commitLocal]
   );
 
   const createOrGetPortalShare = useCallback(
     async (loanId: string) => {
-      if (!user) throw new Error('Not authenticated');
       const loan = loans.find((l) => l.id === loanId);
       if (!loan) throw new Error('Loan not found');
 
       let schedules = schedulesByLoan[loanId];
       if (!schedules) {
-        const snap = await getDocs(
-          query(collection(db, 'loans', loanId, 'schedules'), where('ownerId', '==', user.uid))
-        );
-        schedules = snap.docs
-          .map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }))
-          .sort((a, b) => a.installmentNumber - b.installmentNumber);
+        if (!user) {
+          schedules = [];
+        } else {
+          const snap = await getDocs(
+            query(collection(db, 'loans', loanId, 'schedules'), where('ownerId', '==', user.uid))
+          );
+          schedules = snap.docs
+            .map((d) => ({ ...(d.data() as Omit<LoanSchedule, 'id'>), id: d.id }))
+            .sort((a, b) => a.installmentNumber - b.installmentNumber);
+        }
       }
 
       const shareId = loan.portalShareId || generateSafeId('ps');
+      const compactSchedules = schedules.slice(0, 120).map((s) => ({
+        installmentNumber: s.installmentNumber,
+        dueDate: s.dueDate,
+        principalDue: s.principalDue,
+        interestDue: s.interestDue,
+        totalDue: s.totalDue,
+        paidAmount: roundMoney(s.principalPaid + s.interestPaid, loan.currency),
+        status: s.status,
+      }));
+
+      // Offline or unauthenticated local workspace uses self-contained portable link
+      if (!user || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+        const inlineShare = {
+          id: shareId,
+          ownerId: user?.uid || LOCAL_UID,
+          loanId: loan.id,
+          borrowerFirstName: loan.borrowerName.split(' ')[0].slice(0, 80) || 'Borrower',
+          lenderName: (profile?.displayName || 'Lender').slice(0, 120),
+          lenderPhone: (profile?.lenderPhone || '').slice(0, 40),
+          currency: loan.currency,
+          principal: loan.principal,
+          interestType: loan.interestType,
+          interestRate: loan.interestRate,
+          totalPayable: loan.totalPayable,
+          outstandingBalance: loan.outstandingBalance,
+          status: loan.status,
+          schedules: compactSchedules,
+        };
+        const encoded = encodePortalData(inlineShare);
+        return `${window.location.origin}/?portalData=${encodeURIComponent(encoded)}`;
+      }
+
       const shareData = {
         ownerId: user.uid,
         loanId: loan.id,
@@ -929,15 +1462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         totalPayable: loan.totalPayable,
         outstandingBalance: loan.outstandingBalance,
         status: loan.status,
-        schedules: schedules.slice(0, 120).map((s) => ({
-          installmentNumber: s.installmentNumber,
-          dueDate: s.dueDate,
-          principalDue: s.principalDue,
-          interestDue: s.interestDue,
-          totalDue: s.totalDue,
-          paidAmount: roundMoney(s.principalPaid + s.interestPaid, loan.currency),
-          status: s.status,
-        })),
+        schedules: compactSchedules,
         updatedAt: serverTimestamp(),
       };
 
@@ -959,8 +1484,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addStaffMember = useCallback(
     async (name: string, phone: string, role: 'owner' | 'collector') => {
-      if (!user) return;
       const id = generateSafeId('stf');
+      if (!user) {
+        const nowIso = new Date().toISOString();
+        const newStaff: StaffMember = {
+          id,
+          ownerId: LOCAL_UID,
+          name: name.trim().slice(0, 120),
+          phone: phone.trim().slice(0, 40),
+          role,
+          active: true,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        };
+        await commitLocal((prev) => ({
+          ...prev,
+          staff: [...prev.staff, newStaff],
+        }));
+        await writeAuditLog('add_staff', 'staff', id, `Added ${role} ${name.trim()}`);
+        return;
+      }
+
       try {
         await setDoc(doc(db, 'staff', id), {
           ownerId: user.uid,
@@ -976,12 +1520,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.CREATE, `staff/${id}`);
       }
     },
-    [user, writeAuditLog]
+    [user, writeAuditLog, commitLocal]
   );
 
   const toggleStaffActive = useCallback(
     async (staffId: string, active: boolean) => {
-      if (!user) return;
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          staff: prev.staff.map((m) =>
+            m.id === staffId ? { ...m, active, updatedAt: new Date().toISOString() } : m
+          ),
+        }));
+        return;
+      }
+
       try {
         await updateDoc(doc(db, 'staff', staffId), {
           active,
@@ -991,19 +1544,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.UPDATE, `staff/${staffId}`);
       }
     },
-    [user]
+    [user, commitLocal]
   );
 
   const deleteStaffMember = useCallback(
     async (staffId: string) => {
-      if (!user) return;
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          staff: prev.staff.filter((m) => m.id !== staffId),
+        }));
+        return;
+      }
+
       try {
         await deleteDoc(doc(db, 'staff', staffId));
       } catch (error) {
         handleFirestoreError(error, OperationType.DELETE, `staff/${staffId}`);
       }
     },
-    [user]
+    [user, commitLocal]
   );
 
   const exportAllDataJson = useCallback(() => {
@@ -1022,12 +1582,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const importAllDataJson = useCallback(
     async (jsonText: string) => {
-      if (!user) throw new Error('Not authenticated');
       const parsed = JSON.parse(jsonText) as {
+        profile?: Partial<UserProfile>;
         borrowers?: Borrower[];
         loans?: Loan[];
         schedulesByLoan?: Record<string, LoanSchedule[]>;
+        payments?: Payment[];
+        staff?: StaffMember[];
       };
+
+      if (!user) {
+        await commitLocal((prev) => {
+          const borrowerMap = new Map(prev.borrowers.map((b) => [b.id, b]));
+          for (const b of parsed.borrowers || []) {
+            const bId = b.id || generateSafeId('brw');
+            borrowerMap.set(bId, {
+              ...b,
+              id: bId,
+              ownerId: LOCAL_UID,
+              name: (b.name || 'Borrower').slice(0, 120),
+              phone: (b.phone || '000').slice(0, 40),
+              tags: cleanTags(b.tags),
+              riskScore: b.riskScore ?? 85,
+            });
+          }
+
+          const loanMap = new Map(prev.loans.map((l) => [l.id, l]));
+          for (const l of parsed.loans || []) {
+            if (!l.id) continue;
+            loanMap.set(l.id, { ...l, ownerId: LOCAL_UID });
+          }
+
+          const nextSchedules = { ...prev.schedulesByLoan };
+          if (parsed.schedulesByLoan && typeof parsed.schedulesByLoan === 'object') {
+            for (const [lId, list] of Object.entries(parsed.schedulesByLoan)) {
+              if (Array.isArray(list)) {
+                nextSchedules[lId] = list.map((s) => ({ ...s, ownerId: LOCAL_UID }));
+              }
+            }
+          }
+
+          const payMap = new Map(prev.payments.map((p) => [p.id, p]));
+          for (const p of parsed.payments || []) {
+            if (!p.id) continue;
+            payMap.set(p.id, { ...p, ownerId: LOCAL_UID });
+          }
+
+          const staffMap = new Map(prev.staff.map((m) => [m.id, m]));
+          for (const m of parsed.staff || []) {
+            if (!m.id) continue;
+            staffMap.set(m.id, { ...m, ownerId: LOCAL_UID });
+          }
+
+          return {
+            ...prev,
+            profile: parsed.profile
+              ? {
+                  ...prev.profile,
+                  ...parsed.profile,
+                  uid: LOCAL_UID,
+                  updatedAt: new Date().toISOString(),
+                }
+              : prev.profile,
+            borrowers: Array.from(borrowerMap.values()),
+            loans: Array.from(loanMap.values()),
+            schedulesByLoan: nextSchedules,
+            payments: Array.from(payMap.values()),
+            staff: Array.from(staffMap.values()),
+          };
+        });
+        await writeAuditLog('import_backup', 'settings', LOCAL_UID, 'Imported backup data');
+        return;
+      }
 
       const batch = writeBatch(db);
       for (const b of parsed.borrowers || []) {
@@ -1045,12 +1671,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await batch.commit();
       await writeAuditLog('import_backup', 'settings', user.uid, 'Imported borrower backup data');
     },
-    [user, writeAuditLog]
+    [user, writeAuditLog, commitLocal]
   );
+
+  const isWorkspaceReady = authReady && (Boolean(user) || localLoaded);
 
   const value: AppContextValue = {
     user,
-    authReady,
+    isLocalMode: !user,
+    authReady: isWorkspaceReady,
     profile,
     isPinLocked,
     unlockWithPin,
