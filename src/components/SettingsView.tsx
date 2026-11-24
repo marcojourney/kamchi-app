@@ -3,6 +3,7 @@ import {
   Building2,
   Camera,
   Cloud,
+  Database,
   Download,
   HardDrive,
   Image as ImageIcon,
@@ -42,10 +43,12 @@ export const SettingsView: React.FC = () => {
     deleteStaffMember,
     exportAllDataJson,
     importAllDataJson,
+    importDemoData,
     signInWithGoogle,
     signOut,
   } = useApp();
   const [signingIn, setSigningIn] = useState(false);
+  const [importingDemo, setImportingDemo] = useState(false);
   const [authError, setAuthError] = useState('');
 
   const [lenderName, setLenderName] = useState(profile?.displayName || '');
@@ -633,6 +636,44 @@ export const SettingsView: React.FC = () => {
           {authError && (
             <p className="text-xs text-red-600 dark:text-red-400">{authError}</p>
           )}
+        </div>
+
+        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <Database className="w-4 h-4 text-teal-600 shrink-0" />
+              <span>{t('settings.importDemoData')}</span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('settings.importDemoDesc')}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={importingDemo}
+            onClick={async () => {
+              setImportingDemo(true);
+              setAuthError('');
+              try {
+                const added = await importDemoData();
+                showToast(
+                  added > 0
+                    ? t('settings.importDemoSuccess')
+                    : t('settings.importDemoAlreadyLoaded')
+                );
+              } catch (err) {
+                setAuthError(err instanceof Error ? err.message : 'Failed to import demo data');
+              } finally {
+                setImportingDemo(false);
+              }
+            }}
+            className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/40 px-4 py-2 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-950/70 disabled:opacity-50 transition-colors shrink-0 whitespace-nowrap"
+          >
+            <Database className="w-4 h-4 shrink-0" />
+            <span>
+              {importingDemo ? t('settings.importingDemo') : t('settings.importDemoButton')}
+            </span>
+          </button>
         </div>
       </div>
 

@@ -291,7 +291,13 @@
     "localModeBadge": "Local Offline Mode (No Login Required)",
     "localModeDesc": "All borrowers, loans, receipts, and schedules are stored on this device. Optional: sign in with Google to sync to the cloud.",
     "cloudSyncedBadge": "Cloud Synced with Google",
-    "signInOfflineHint": "Connect to the internet if you want to sign in with Google."
+    "signInOfflineHint": "Connect to the internet if you want to sign in with Google.",
+    "importDemoData": "Sample Demo Portfolio",
+    "importDemoDesc": "Load complete sample borrowers, loans, repayment schedules, payments, arrears buckets, and collectors to explore all features.",
+    "importDemoButton": "Import Demo Data",
+    "importingDemo": "Importing...",
+    "importDemoSuccess": "Demo data imported successfully.",
+    "importDemoAlreadyLoaded": "Demo portfolio is already loaded."
   },
   "portal": {
     "title": "Borrower Loan Summary",

@@ -37,6 +37,7 @@ import {
   saveLocalWorkspace,
   type LocalWorkspaceData,
 } from '../lib/localStore';
+import { buildDemoWorkspaceBundle } from '../lib/demoData';
 import type {
   AppLanguage,
   AuditLog,
@@ -139,6 +140,7 @@ interface AppContextValue {
   ensureSchedulesLoaded: (loanId: string) => Promise<void>;
   exportAllDataJson: () => string;
   importAllDataJson: (jsonText: string) => Promise<void>;
+  importDemoData: () => Promise<number>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -1686,6 +1688,221 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [user, writeAuditLog, commitLocal]
   );
 
+  const importDemoData = useCallback(async (): Promise<number> => {
+    const ownerId = user?.uid || LOCAL_UID;
+    const bundle = buildDemoWorkspaceBundle(todayIso, ownerId);
+
+    const existingBorrowerIds = new Set(borrowers.map((b) => b.id));
+    const existingLoanIds = new Set(loans.map((l) => l.id));
+    const existingPaymentIds = new Set(payments.map((p) => p.id));
+    const existingStaffIds = new Set(staff.map((m) => m.id));
+
+    const newBorrowers = bundle.borrowers.filter((b) => !existingBorrowerIds.has(b.id));
+    const newLoans = bundle.loans.filter((l) => !existingLoanIds.has(l.id));
+    const newPayments = bundle.payments.filter((p) => !existingPaymentIds.has(p.id));
+    const newStaff = bundle.staff.filter((m) => !existingStaffIds.has(m.id));
+    const totalAdded = newBorrowers.length + newLoans.length + newPayments.length + newStaff.length;
+
+    const shouldSeedCash =
+      (profile?.capitalCashUsd ?? 0) === 0 && (profile?.capitalCashKhr ?? 0) === 0;
+
+    if (!user) {
+      if (totalAdded === 0 && !shouldSeedCash) {
+        return 0;
+      }
+
+      await commitLocal((prev) => {
+        const nextSchedules = { ...prev.schedulesByLoan };
+        for (const l of newLoans) {
+          if (bundle.schedulesByLoan[l.id]) {
+            nextSchedules[l.id] = bundle.schedulesByLoan[l.id];
+          }
+        }
+        return {
+          ...prev,
+          profile: shouldSeedCash
+            ? {
+                ...prev.profile,
+                capitalCashUsd: bundle.suggestedCashUsd,
+                capitalCashKhr: bundle.suggestedCashKhr,
+                updatedAt: new Date().toISOString(),
+              }
+            : prev.profile,
+          borrowers: [...prev.borrowers, ...newBorrowers],
+          loans: [...prev.loans, ...newLoans],
+          schedulesByLoan: nextSchedules,
+          payments: [...prev.payments, ...newPayments],
+          staff: [...prev.staff, ...newStaff],
+        };
+      });
+
+      await writeAuditLog(
+        'import_demo',
+        'settings',
+        LOCAL_UID,
+        `Imported demo portfolio (${newBorrowers.length} borrowers, ${newLoans.length} loans)`
+      );
+      return totalAdded;
+    }
+
+    if (totalAdded === 0 && !shouldSeedCash) {
+      return 0;
+    }
+
+    // Batch 1: Borrowers, Loans, and Loan Schedules (must commit before Payments because rules use exists() on loan doc)
+    const batch1Ops: Array<(b: ReturnType<typeof writeBatch>) => void> = [];
+
+    for (const brw of newBorrowers) {
+      const payload: Record<string, unknown> = {
+        ownerId: user.uid,
+        name: brw.name.slice(0, 120),
+        phone: brw.phone.slice(0, 40),
+        tags: cleanTags(brw.tags),
+        riskScore: brw.riskScore ?? 85,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      if (brw.address) payload.address = brw.address.slice(0, 300);
+      if (brw.nationalIdNumber) payload.nationalIdNumber = brw.nationalIdNumber.slice(0, 60);
+      if (brw.guarantorName) payload.guarantorName = brw.guarantorName.slice(0, 120);
+      if (brw.guarantorPhone) payload.guarantorPhone = brw.guarantorPhone.slice(0, 40);
+      if (brw.notes) payload.notes = brw.notes.slice(0, 1000);
+
+      batch1Ops.push((batch) => batch.set(doc(db, 'borrowers', brw.id), payload));
+    }
+
+    for (const ln of newLoans) {
+      const loanPayload: Record<string, unknown> = {
+        ownerId: user.uid,
+        borrowerId: ln.borrowerId,
+        borrowerName: ln.borrowerName.slice(0, 120),
+        currency: ln.currency,
+        principal: ln.principal,
+        interestRate: ln.interestRate,
+        interestType: ln.interestType,
+        termCount: Math.round(ln.termCount),
+        frequency: ln.frequency,
+        startDate: ln.startDate.slice(0, 30),
+        adminFee: Number(ln.adminFee ?? 0),
+        lateFeeType: ln.lateFeeType || 'fixed',
+        lateFeeValue: Number(ln.lateFeeValue ?? 0),
+        gracePeriodDays: Math.round(Number(ln.gracePeriodDays ?? 0)),
+        status: ln.status,
+        totalPayable: ln.totalPayable,
+        totalInterest: Number(ln.totalInterest ?? 0),
+        paidPrincipal: Number(ln.paidPrincipal ?? 0),
+        paidInterest: Number(ln.paidInterest ?? 0),
+        paidPenalty: Number(ln.paidPenalty ?? 0),
+        outstandingBalance: ln.outstandingBalance,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+      if (ln.frequency === 'custom' && ln.customIntervalDays) {
+        loanPayload.customIntervalDays = Math.round(ln.customIntervalDays);
+      }
+      if (ln.collateralText) {
+        loanPayload.collateralText = ln.collateralText.slice(0, 500);
+      }
+      batch1Ops.push((batch) => batch.set(doc(db, 'loans', ln.id), loanPayload));
+
+      for (const sch of bundle.schedulesByLoan[ln.id] || []) {
+        const schPayload: Record<string, unknown> = {
+          ownerId: user.uid,
+          loanId: ln.id,
+          borrowerId: ln.borrowerId,
+          installmentNumber: Math.round(sch.installmentNumber),
+          dueDate: sch.dueDate.slice(0, 30),
+          principalDue: sch.principalDue,
+          interestDue: sch.interestDue,
+          totalDue: sch.totalDue,
+          principalPaid: sch.principalPaid,
+          interestPaid: sch.interestPaid,
+          penaltyPaid: sch.penaltyPaid,
+          status: sch.status,
+          updatedAt: serverTimestamp(),
+        };
+        if (sch.paidAt) {
+          schPayload.paidAt = sch.paidAt.slice(0, 40);
+        }
+        batch1Ops.push((batch) =>
+          batch.set(doc(db, 'loans', ln.id, 'schedules', sch.id), schPayload)
+        );
+      }
+    }
+
+    try {
+      for (let i = 0; i < batch1Ops.length; i += 400) {
+        const b = writeBatch(db);
+        for (const op of batch1Ops.slice(i, i + 400)) {
+          op(b);
+        }
+        await b.commit();
+      }
+
+      // Batch 2: Payments, Staff, and optional initial Cash-on-Hand
+      const batch2Ops: Array<(b: ReturnType<typeof writeBatch>) => void> = [];
+      for (const pay of newPayments) {
+        const payPayload: Record<string, unknown> = {
+          ownerId: user.uid,
+          loanId: pay.loanId,
+          borrowerId: pay.borrowerId,
+          borrowerName: pay.borrowerName.slice(0, 120),
+          currency: pay.currency,
+          amount: pay.amount,
+          principalPortion: pay.principalPortion,
+          interestPortion: pay.interestPortion,
+          penaltyPortion: pay.penaltyPortion,
+          method: pay.method,
+          paymentDate: pay.paymentDate.slice(0, 30),
+          createdAt: serverTimestamp(),
+        };
+        if (pay.referenceNo) payPayload.referenceNo = pay.referenceNo.slice(0, 80);
+        if (pay.notes) payPayload.notes = pay.notes.slice(0, 400);
+        if (pay.collectedBy) payPayload.collectedBy = pay.collectedBy.slice(0, 120);
+        batch2Ops.push((batch) => batch.set(doc(db, 'payments', pay.id), payPayload));
+      }
+
+      for (const member of newStaff) {
+        const stfPayload: Record<string, unknown> = {
+          ownerId: user.uid,
+          name: member.name.slice(0, 120),
+          role: member.role,
+          active: Boolean(member.active),
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        if (member.phone) stfPayload.phone = member.phone.slice(0, 40);
+        batch2Ops.push((batch) => batch.set(doc(db, 'staff', member.id), stfPayload));
+      }
+
+      for (let i = 0; i < batch2Ops.length; i += 400) {
+        const b = writeBatch(db);
+        for (const op of batch2Ops.slice(i, i + 400)) {
+          op(b);
+        }
+        await b.commit();
+      }
+
+      if (shouldSeedCash) {
+        await updateDoc(doc(db, 'users', user.uid), {
+          capitalCashUsd: bundle.suggestedCashUsd,
+          capitalCashKhr: bundle.suggestedCashKhr,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await writeAuditLog(
+        'import_demo',
+        'settings',
+        user.uid,
+        `Imported demo portfolio (${newBorrowers.length} borrowers, ${newLoans.length} loans)`
+      );
+      return totalAdded;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'demo_import');
+    }
+  }, [user, todayIso, borrowers, loans, payments, staff, profile?.capitalCashUsd, profile?.capitalCashKhr, commitLocal, writeAuditLog]);
+
   const isWorkspaceReady = authReady && (Boolean(user) || localLoaded);
 
   const value: AppContextValue = {
@@ -1724,6 +1941,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ensureSchedulesLoaded,
     exportAllDataJson,
     importAllDataJson,
+    importDemoData,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
