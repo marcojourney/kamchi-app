@@ -232,7 +232,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth listener (supports unauthenticated Local/Offline Mode seamlessly)
   useEffect(() => {
+    let resolved = false;
+    const offlineFallbackTimer = window.setTimeout(() => {
+      if (!resolved && typeof navigator !== 'undefined' && !navigator.onLine) {
+        setAuthReady(true);
+      }
+    }, 1500);
+
     const unsub = onAuthStateChanged(auth, (firebaseUser) => {
+      resolved = true;
+      window.clearTimeout(offlineFallbackTimer);
       setUser(firebaseUser);
       setAuthReady(true);
       if (!firebaseUser) {
@@ -240,7 +249,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLocalLoaded(false);
       }
     });
-    return unsub;
+    return () => {
+      window.clearTimeout(offlineFallbackTimer);
+      unsub();
+    };
   }, []);
 
   // Load Local/Offline workspace whenever user is not signed in with Google
