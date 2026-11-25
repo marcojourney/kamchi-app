@@ -44,7 +44,7 @@
     "settings": "Settings"
   },
   "dashboard": {
-    "title": "Portfolio Overview",
+    "title": "Lending Summary",
     "totalLent": "Total Principal Lent",
     "totalCollected": "Total Collected",
     "outstanding": "Outstanding Balance",
