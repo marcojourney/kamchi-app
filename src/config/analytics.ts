@@ -23,8 +23,13 @@ interface ViteMetaEnvLike {
 
 function readMetaEnv(): ViteMetaEnvLike {
   try {
-    const meta = import.meta as unknown as { env?: ViteMetaEnvLike };
-    return meta?.env ?? {};
+    return {
+      DEV: import.meta.env.DEV,
+      PROD: import.meta.env.PROD,
+      MODE: import.meta.env.MODE,
+      VITE_GA4_MEASUREMENT_ID: import.meta.env.VITE_GA4_MEASUREMENT_ID,
+      VITE_ANALYTICS_ENABLED: import.meta.env.VITE_ANALYTICS_ENABLED,
+    };
   } catch {
     return {};
   }
@@ -40,12 +45,16 @@ export function getAnalyticsConfig(override?: Partial<ViteMetaEnvLike>): {
       ? env.VITE_GA4_MEASUREMENT_ID.trim()
       : DEFAULT_GA4_MEASUREMENT_ID;
 
+  const isNodeDevOrTest =
+    env.PROD !== true &&
+    typeof process !== 'undefined' &&
+    (process.env?.NODE_ENV === 'test' || process.env?.NODE_ENV === 'development');
+
   const isDevOrTest =
     Boolean(env.DEV) ||
     env.MODE === 'development' ||
     env.MODE === 'test' ||
-    (typeof process !== 'undefined' &&
-      (process.env?.NODE_ENV === 'test' || process.env?.NODE_ENV === 'development'));
+    isNodeDevOrTest;
 
   const explicitlyDisabled = env.VITE_ANALYTICS_ENABLED === 'false';
   const explicitlyEnabled = env.VITE_ANALYTICS_ENABLED === 'true';

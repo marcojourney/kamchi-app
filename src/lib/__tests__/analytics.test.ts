@@ -293,6 +293,44 @@ describe('analytics consent, offline handling, cookies & funnel', () => {
     });
   });
 
+  it('pushes native Arguments objects (not Arrays) into window.dataLayer for gtag.js compatibility', () => {
+    const fakeWindow: { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void } = {};
+    const prevWindow = (globalThis as { window?: unknown }).window;
+    (globalThis as { window?: unknown }).window = fakeWindow;
+
+    try {
+      __setAnalyticsRuntimeForTests({
+        measurementId: 'G-6HVXECW1B4',
+        buildDisabled: false,
+        isOnline: () => true,
+        loadScript: () => {},
+      });
+      setAnalyticsConsent(true);
+      trackScreenView('dashboard');
+
+      assert.ok(Array.isArray(fakeWindow.dataLayer));
+      assert.ok(fakeWindow.dataLayer.length >= 5);
+      for (const entry of fakeWindow.dataLayer) {
+        assert.equal(
+          Object.prototype.toString.call(entry),
+          '[object Arguments]',
+          'Expected gtag.js Arguments object in dataLayer'
+        );
+      }
+      const configEntry = fakeWindow.dataLayer.find((e) => (e as IArguments)[0] === 'config') as
+        | IArguments
+        | undefined;
+      assert.ok(configEntry);
+      assert.equal(configEntry[1], 'G-6HVXECW1B4');
+    } finally {
+      if (prevWindow === undefined) {
+        delete (globalThis as { window?: unknown }).window;
+      } else {
+        (globalThis as { window?: unknown }).window = prevWindow;
+      }
+    }
+  });
+
   it('sends each activation funnel event at most once per install', async () => {
     setAnalyticsConsent(true);
 
