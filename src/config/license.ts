@@ -14,7 +14,7 @@
  */
 
 export const LICENSE_PUBLIC_KEY_HEX =
-  '2f8e4a1b9c7d6e5f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f';
+  'e6a33ed782d8e8dc801814884f29e9dd43caa9600aa4d9cab1f95508eca3d4ea';
 
 export const SELLER_TELEGRAM_USERNAME = 'YOUR_USERNAME';
 
