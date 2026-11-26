@@ -2,9 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { Camera, ChevronRight, Plus, Search, Trash2, Upload, UserPlus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import { canCreateBorrower } from '../lib/entitlements';
 import { compressImageToDataUrl, formatCurrency, formatDateLocalized } from '../lib/finance';
 import type { Borrower } from '../types/loan';
 import { CameraCaptureModal } from './CameraCaptureModal';
+import { useLicenseContext } from './LicenseGate';
 
 interface BorrowersViewProps {
   externalOpenAdd?: boolean;
@@ -29,6 +31,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
     updateBorrower,
     deleteBorrower,
   } = useApp();
+  const { licenseState, openUpgradePrompt } = useLicenseContext();
 
   const lang = i18n.language === 'km' ? 'km' : 'en';
   const useKh = Boolean(profile?.useKhmerNumerals);
@@ -58,6 +61,10 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
   const [zoomPhoto, setZoomPhoto] = useState<{ src: string; label: string } | null>(null);
 
   const openAdd = () => {
+    if (!canCreateBorrower(licenseState)) {
+      openUpgradePrompt('read_only');
+      return;
+    }
     setEditingBorrower(null);
     setName('');
     setPhone('');

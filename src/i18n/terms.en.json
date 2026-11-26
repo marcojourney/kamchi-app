@@ -1,0 +1,191 @@
+{
+  "_legalNotice": "PLACEHOLDER LEGAL TEXT ONLY. Must be reviewed and approved by a qualified Cambodian lawyer before commercial launch.",
+  "brand": {
+    "name": "KamChi",
+    "subtitle": "Personal Lending Ledger"
+  },
+  "welcome": {
+    "title": "Welcome to KamChi",
+    "subtitle": "Please review and accept our Terms and Privacy Policy before using the ledger on this device.",
+    "updatedBadge": "Terms Updated",
+    "updatedTitle": "Terms updated to version {{version}}",
+    "updatedDescription": "We updated our Terms and Conditions. Please review the changes below and accept to continue.",
+    "storageUnavailableWarning": "Private browsing or restricted storage detected. Your acceptance cannot be saved permanently on this device and may be asked again next time.",
+    "languageLabel": "Choose language"
+  },
+  "scroll": {
+    "progressLabel": "Reading progress",
+    "hintScrollToRead": "Scroll to read all terms before continuing",
+    "hintComplete": "You have reached the end of the terms. You may now confirm below."
+  },
+  "consent": {
+    "checkboxPrefix": "I have read and agree to the",
+    "termsLink": "Terms and Conditions",
+    "and": "and",
+    "privacyLink": "Privacy Policy",
+    "scrollRequiredNote": "Scroll to the bottom of the box above to enable this checkbox.",
+    "acceptButton": "Accept and continue",
+    "declineButton": "Decline"
+  },
+  "declineDialog": {
+    "title": "You need to accept the terms to use KamChi",
+    "body": "KamChi stores lending records locally on your device and requires your agreement to our Terms and Privacy Policy before opening your ledger.",
+    "reviewButton": "Review terms",
+    "closeAppButton": "Close app"
+  },
+  "exitScreen": {
+    "title": "KamChi is closed",
+    "body": "You chose not to accept the Terms and Conditions. No ledger data has been opened. You can reopen the terms anytime if you wish to continue.",
+    "reopenButton": "Reopen terms"
+  },
+  "reader": {
+    "close": "Close",
+    "versionLabel": "Version {{version}}",
+    "termsTitle": "Terms and Conditions",
+    "privacyTitle": "Privacy Policy",
+    "placeholderNotice": "Placeholder Notice: This text is a plain-language draft and must be reviewed by a qualified Cambodian lawyer prior to launch."
+  },
+  "settings": {
+    "cardTitle": "Terms and Privacy",
+    "cardSubtitle": "Review your accepted Terms and Conditions, Privacy Policy, and local data removal guidance.",
+    "openPageButton": "View Terms & Privacy",
+    "pageTitle": "Terms and Privacy",
+    "backToSettings": "Back to Settings",
+    "statusAccepted": "Accepted",
+    "statusNotSaved": "Session-only (storage unavailable)",
+    "acceptedVersionLabel": "Accepted Version",
+    "acceptedDateLabel": "Accepted Date",
+    "acceptedLanguageLabel": "Language at Acceptance",
+    "languageEn": "English",
+    "languageKm": "Khmer (ភាសាខ្មែរ)",
+    "readTermsButton": "Read Terms and Conditions",
+    "readPrivacyButton": "Read Privacy Policy",
+    "withdrawNoticeTitle": "Removing Acceptance or Deleting Local Data",
+    "withdrawNoticeBody": "Consent cannot be withdrawn inside the app while ledger data remains active. To stop using KamChi and erase all locally stored borrowers, loans, photos, and acceptance records:",
+    "deleteStepsTitle": "Delete my local data / uninstall",
+    "deleteStep1": "1. Optional: Export a JSON backup in Settings if you want to keep an offline copy of your records.",
+    "deleteStep2": "2. Uninstall the KamChi app from your home screen, or open your browser settings and clear site storage / cookies for this site.",
+    "deleteStep3": "3. Once site storage is cleared or the app is uninstalled, all local records and your acceptance record are permanently removed from this device."
+  },
+  "termsSections": [
+    {
+      "id": "about",
+      "title": "1. About KamChi",
+      "body": [
+        "KamChi is a record-keeping and loan management tool built for personal lenders. It helps you organize borrower details, repayment schedules, receipts, and reminders.",
+        "KamChi is not a bank, microfinance institution, licensed lender, payment processor, or financial or legal advisor."
+      ]
+    },
+    {
+      "id": "responsibility",
+      "title": "2. Your Responsibility",
+      "body": [
+        "You are solely responsible for your lending activities, including setting principal amounts, interest rates, late fees, and written or verbal agreements with your borrowers.",
+        "You agree to comply with all applicable laws and regulations of the Kingdom of Cambodia."
+      ]
+    },
+    {
+      "id": "local_data",
+      "title": "3. Your Data Stays on Your Device",
+      "body": [
+        "Your borrower names, phone numbers, national ID photos, loan amounts, repayment schedules, and payment records are stored locally on your device (in IndexedDB browser storage) and are not automatically uploaded to KamChi servers.",
+        "If you optionally choose to sign in with Google for personal cloud backup, your synced data is stored under your own authenticated account."
+      ]
+    },
+    {
+      "id": "backups",
+      "title": "4. Backups",
+      "body": [
+        "You are responsible for backing up your records regularly using the Backup & Restore export feature in Settings.",
+        "If your device is lost, damaged, stolen, reset, or if browser storage is cleared without a backup, your records cannot be recovered by KamChi."
+      ]
+    },
+    {
+      "id": "collection",
+      "title": "5. What We Collect",
+      "body": [
+        "When you purchase or activate a paid license, KamChi only collects the minimum information needed to verify your license: your license key, plan tier, expiry date, device identifier, and the contact details you voluntarily provide during purchase.",
+        "We do not collect, sell, or inspect your borrowers' loan ledgers."
+      ]
+    },
+    {
+      "id": "license",
+      "title": "6. License",
+      "body": [
+        "A valid license key unlocks paid features and is limited to the stated number of devices for your plan. You must not share, distribute, or resell your license key.",
+        "If your license expires, the app switches to read-only mode so your existing lending records stay accessible and exportable at all times."
+      ]
+    },
+    {
+      "id": "borrower_info",
+      "title": "7. Borrower Information",
+      "body": [
+        "You confirm that you have the legal right and borrower consent to record and store borrowers' and guarantors' personal information, national ID numbers, and photos on your device.",
+        "You agree to protect this information using device locks or the in-app PIN lock and handle it responsibly."
+      ]
+    },
+    {
+      "id": "calculations",
+      "title": "8. Calculations",
+      "body": [
+        "Repayment schedules, interest totals, overdue counts, late fees, and currency conversions are calculated as a convenience tool.",
+        "You should always verify amounts and totals yourself before issuing a contract, collecting payment, or taking legal action."
+      ]
+    },
+    {
+      "id": "liability",
+      "title": "9. No Warranty and Limits of Liability",
+      "body": [
+        "KamChi is provided on an \"as is\" and \"as available\" basis to the fullest extent permitted by applicable law, without warranties of uninterrupted availability or error-free operation.",
+        "To the extent allowed by law, KamChi and its creators are not liable for unpaid loans, borrower disputes, lost local data, or indirect or consequential losses."
+      ]
+    },
+    {
+      "id": "changes",
+      "title": "10. Changes to These Terms",
+      "body": [
+        "We may update these Terms and Conditions or our Privacy Policy from time to time.",
+        "When material changes are made, KamChi will show a summary of what changed and ask you to accept the updated version before continuing."
+      ]
+    },
+    {
+      "id": "contact",
+      "title": "11. Contact",
+      "body": [
+        "If you have questions about these Terms, licensing, or privacy, please contact us (placeholder details prior to launch):",
+        "Telegram: {{telegram}} · Email: {{email}}"
+      ]
+    }
+  ],
+  "privacySections": [
+    {
+      "id": "privacy_overview",
+      "title": "1. Offline-First Privacy Design",
+      "body": [
+        "KamChi is designed so your lending ledger stays on your own device. Borrower profiles, national ID images, contracts, payment history, and collector lists remain inside local IndexedDB storage on your device."
+      ]
+    },
+    {
+      "id": "privacy_license",
+      "title": "2. License & Support Information",
+      "body": [
+        "If you purchase a license or contact support, we only process your license key, plan status, expiry date, device identifier, and the contact details you share with us."
+      ]
+    },
+    {
+      "id": "privacy_permissions",
+      "title": "3. Camera, Location & Notifications",
+      "body": [
+        "Optional permissions such as camera (for ID/collateral photos), GPS check-in (for collection logs), and browser notifications (for due reminders) are only used when you trigger those features and stay under your control."
+      ]
+    },
+    {
+      "id": "privacy_deletion",
+      "title": "4. Deleting Your Local Data",
+      "body": [
+        "Because KamChi stores records on your device, you can erase all local records at any time by clearing site storage for KamChi in your browser settings or uninstalling the installed PWA.",
+        "For support inquiries (placeholder contact): Telegram {{telegram}} · Email {{email}}"
+      ]
+    }
+  ]
+}

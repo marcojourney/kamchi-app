@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
+import { canExport, canUseTelegramReminders, isReadOnly } from '../lib/entitlements';
 import {
   computeScheduleLateFee,
   convertCurrency,
@@ -20,6 +21,7 @@ import type { AgingBucketKey } from '../lib/finance';
 import { exportLoansAndPaymentsToExcel, exportPnlReportPdf } from '../lib/pdfExport';
 import type { Loan } from '../types/loan';
 import { ArrearsView } from './ArrearsView';
+import { useLicenseContext } from './LicenseGate';
 
 export type ReportsSubTab = 'reminders' | 'reports' | 'arrears' | 'audit';
 
@@ -41,6 +43,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
   const { t, i18n } = useTranslation();
   const { user, profile, borrowers, loans, schedulesByLoan, payments, auditLogs, todayIso } =
     useApp();
+  const { licenseState, openUpgradePrompt } = useLicenseContext();
 
   const lang = i18n.language === 'km' ? 'km' : 'en';
   const useKh = Boolean(profile?.useKhmerNumerals);
@@ -126,6 +129,10 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
   };
 
   const handleTelegramBotSend = async (text: string) => {
+    if (!canUseTelegramReminders(licenseState)) {
+      openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'pro_telegram');
+      return;
+    }
     if (!user || !telegramChatId.trim()) return;
     setStatusNotice('');
     try {
@@ -307,7 +314,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                           <Send className="w-3.5 h-3.5" />
                           <span>{t('reports.sendTelegramBot')}</span>
                         </button>
-                      ) : (
+                      ) : canUseTelegramReminders(licenseState) ? (
                         <a
                           href={`https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(msg)}`}
                           target="_blank"
@@ -317,6 +324,17 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                           <Send className="w-3.5 h-3.5 text-sky-600" />
                           <span>{t('reports.openTelegram')}</span>
                         </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'pro_telegram')
+                          }
+                          className="min-h-[36px] flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                        >
+                          <Send className="w-3.5 h-3.5 text-sky-600" />
+                          <span>{t('reports.openTelegram')}</span>
+                        </button>
                       )}
 
                       <a
@@ -361,7 +379,11 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() =>
+              onClick={() => {
+                if (!canExport(licenseState)) {
+                  openUpgradePrompt('pro_export');
+                  return;
+                }
                 exportPnlReportPdf({
                   lenderName: profile?.displayName || t('app.name'),
                   lenderPhone: profile?.lenderPhone,
@@ -378,8 +400,8 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                   loans,
                   lang,
                   useKhmerNumerals: useKh,
-                })
-              }
+                });
+              }}
               className="min-h-[44px] flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700"
             >
               <FileText className="w-4 h-4" />
@@ -387,7 +409,13 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => exportLoansAndPaymentsToExcel({ loans, payments, borrowers })}
+              onClick={() => {
+                if (!canExport(licenseState)) {
+                  openUpgradePrompt('pro_export');
+                  return;
+                }
+                exportLoansAndPaymentsToExcel({ loans, payments, borrowers });
+              }}
               className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />

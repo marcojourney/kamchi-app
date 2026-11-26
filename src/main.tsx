@@ -3,7 +3,13 @@ import { registerSW } from 'virtual:pwa-register';
 import './i18n';
 import './index.css';
 import App from './App.tsx';
+import { TERMS_VERSION } from './config/terms';
+import { preloadLicenseState } from './lib/licenseStorage';
+import { preloadTermsAcceptance } from './lib/termsAcceptance';
 
 registerSW({ immediate: true });
 
-createRoot(document.getElementById('root')!).render(<App />);
+Promise.all([preloadTermsAcceptance(TERMS_VERSION), preloadLicenseState()]).finally(() => {
+  createRoot(document.getElementById('root')!).render(<App />);
+});
+

@@ -22,6 +22,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { auth, db, googleProvider, handleFirestoreError, OperationType } from '../lib/firebase';
 import {
+  canBackupExport,
+  canBackupRestore,
+  canCreateBorrower,
+  canCreateLoan,
+  canUseStaffAccounts,
+} from '../lib/entitlements';
+import {
   allocatePaymentAcrossSchedules,
   computeBorrowerRiskScore,
   generateRepaymentSchedule,
@@ -29,6 +36,7 @@ import {
   hashPinSha256,
   roundMoney,
 } from '../lib/finance';
+import { getCurrentDerivedLicenseState, touchLatestSeenTime } from '../lib/licenseStorage';
 import {
   createDefaultLocalWorkspace,
   encodePortalData,
@@ -229,6 +237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setStaff([...next.staff].sort((a, b) => a.name.localeCompare(b.name)));
       setAuditLogs(next.auditLogs.slice(0, 100));
       await saveLocalWorkspace(next);
+      void touchLatestSeenTime();
     },
     []
   );
@@ -751,6 +760,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createBorrower = useCallback(
     async (input: CreateBorrowerInput) => {
+      if (!canCreateBorrower(getCurrentDerivedLicenseState())) {
+        throw new Error('Cannot create borrower in read-only mode');
+      }
       const id = generateSafeId('brw');
       const nowIso = new Date().toISOString();
 
@@ -813,6 +825,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         await setDoc(doc(db, 'borrowers', id), payload);
+        void touchLatestSeenTime();
         await writeAuditLog('create_borrower', 'borrower', id, `Added borrower ${input.name.trim()}`);
         return id;
       } catch (error) {
@@ -936,6 +949,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createLoan = useCallback(
     async (input: CreateLoanInput) => {
+      const activeLoanCount = loans.filter((l) => l.status === 'active').length;
+      if (!canCreateLoan(getCurrentDerivedLicenseState(), activeLoanCount)) {
+        throw new Error('Plan limit or read-only mode prevents creating a new loan');
+      }
       const borrower = borrowers.find((b) => b.id === input.borrowerId);
       if (!borrower) throw new Error('Borrower not found');
 
@@ -1095,6 +1112,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         await batch.commit();
+        void touchLatestSeenTime();
         await writeAuditLog(
           'create_loan',
           'loan',
@@ -1106,7 +1124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         handleFirestoreError(error, OperationType.WRITE, `loans/${loanId}`);
       }
     },
-    [user, borrowers, todayIso, writeAuditLog, commitLocal]
+    [user, borrowers, loans, todayIso, writeAuditLog, commitLocal]
   );
 
   const syncPortalIfShared = useCallback(
@@ -1286,6 +1304,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         await batch.commit();
+        void touchLatestSeenTime();
         await writeAuditLog(
           'record_payment',
           'payment',
@@ -1375,6 +1394,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     async (oldLoanId: string, mode: 'renew' | 'topup' | 'restructure', newLoanInput: CreateLoanInput) => {
       const oldLoan = loans.find((l) => l.id === oldLoanId);
       if (!oldLoan) throw new Error('Loan not found');
+      // Since oldLoan will be marked renewed, subtract 1 if it was active when evaluating free cap
+      const remainingActiveCount = loans.filter((l) => l.status === 'active' && l.id !== oldLoanId).length;
+      if (!canCreateLoan(getCurrentDerivedLicenseState(), remainingActiveCount)) {
+        throw new Error('Plan limit or read-only mode prevents renewing this loan');
+      }
 
       if (!user) {
         await commitLocal((prev) => ({
@@ -1501,6 +1525,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addStaffMember = useCallback(
     async (name: string, phone: string, role: 'owner' | 'collector') => {
+      if (!canUseStaffAccounts(getCurrentDerivedLicenseState())) {
+        throw new Error('Business license required for staff accounts');
+      }
       const id = generateSafeId('stf');
       if (!user) {
         const nowIso = new Date().toISOString();
@@ -1532,6 +1559,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
+        void touchLatestSeenTime();
         await writeAuditLog('add_staff', 'staff', id, `Added ${role} ${name.trim()}`);
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, `staff/${id}`);
@@ -1584,6 +1612,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const exportAllDataJson = useCallback(() => {
+    if (!canBackupExport(getCurrentDerivedLicenseState())) {
+      throw new Error('Pro license required to export backups');
+    }
     const payload = {
       exportedAt: new Date().toISOString(),
       app: 'KamChi',
@@ -1599,6 +1630,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const importAllDataJson = useCallback(
     async (jsonText: string) => {
+      if (!canBackupRestore(getCurrentDerivedLicenseState())) {
+        throw new Error('Pro license required to restore backups');
+      }
       const parsed = JSON.parse(jsonText) as {
         profile?: Partial<UserProfile>;
         borrowers?: Borrower[];

@@ -1,6 +1,8 @@
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import { canExport, canExportContracts } from './entitlements';
 import { formatCurrency, formatDateLocalized } from './finance';
+import { getCurrentDerivedLicenseState } from './licenseStorage';
 import { buildXlsxBlob, triggerBlobDownload } from './xlsxWriter';
 import type {
   AppLanguage,
@@ -292,6 +294,10 @@ export async function exportLoanContractPdf(params: {
     useKhmerNumerals = false,
   } = params;
 
+  if (!canExportContracts(getCurrentDerivedLicenseState())) {
+    throw new Error('Business license required for contract export');
+  }
+
   const isKm = lang === 'km';
   const rowsHtml = schedules
     .slice(0, 60)
@@ -409,6 +415,7 @@ export interface CustomerScheduleExportInput {
   startDate?: string;
   interestRate?: number;
   status: string;
+  isBorrowerPortal?: boolean;
   rows: Array<{
     installmentNumber: number;
     dueDate: string;
@@ -473,6 +480,7 @@ export function buildCustomerScheduleInputFromPortal(
     totalPayable: portal.totalPayable,
     outstandingBalance: portal.outstandingBalance,
     status: portal.status,
+    isBorrowerPortal: true,
     rows: portal.schedules.map((s) => ({
       installmentNumber: s.installmentNumber,
       dueDate: s.dueDate,
@@ -500,6 +508,9 @@ export async function exportLoanSchedulePdf(
   lang: AppLanguage,
   useKhmerNumerals = false
 ): Promise<void> {
+  if (!input.isBorrowerPortal && !canExport(getCurrentDerivedLicenseState())) {
+    throw new Error('Pro license required to export schedules');
+  }
   const isKm = lang === 'km';
   const hasSplitCols = input.rows.some(
     (r) => typeof r.principalDue === 'number' && typeof r.interestDue === 'number'
@@ -639,6 +650,10 @@ export async function exportPnlReportPdf(params: {
     useKhmerNumerals = false,
   } = params;
 
+  if (!canExport(getCurrentDerivedLicenseState())) {
+    throw new Error('Pro license required to export P&L report');
+  }
+
   const isKm = lang === 'km';
   const safeLogoUrl =
     lenderLogoDataUrl && lenderLogoDataUrl.startsWith('data:image/')
@@ -738,6 +753,9 @@ export async function exportPnlReportPdf(params: {
 }
 
 export function exportLoanScheduleExcel(input: CustomerScheduleExportInput): void {
+  if (!input.isBorrowerPortal && !canExport(getCurrentDerivedLicenseState())) {
+    throw new Error('Pro license required to export schedule Excel');
+  }
   const summaryRows: Array<Record<string, string | number>> = [
     {
       LoanID: input.loanId,
@@ -811,6 +829,9 @@ export function exportLoansAndPaymentsToExcel(params: {
   payments: Payment[];
   borrowers: Borrower[];
 }) {
+  if (!canExport(getCurrentDerivedLicenseState())) {
+    throw new Error('Pro license required to export Excel report');
+  }
   const loanRows = params.loans.map((l) => ({
     LoanID: l.id,
     Borrower: l.borrowerName,

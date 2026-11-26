@@ -34,6 +34,12 @@ import {
 } from '../lib/finance';
 import type { LoanArrearsSummary } from '../lib/finance';
 import {
+  canCreateLoan,
+  canExport,
+  canExportContracts,
+  isReadOnly,
+} from '../lib/entitlements';
+import {
   buildCustomerScheduleInputFromLoan,
   exportLoanContractPdf,
   exportLoanScheduleExcel,
@@ -41,6 +47,7 @@ import {
 } from '../lib/pdfExport';
 import type { Loan } from '../types/loan';
 import { CreateLoanModal } from './CreateLoanModal';
+import { useLicenseContext } from './LicenseGate';
 
 interface LoansViewProps {
   selectedLoanId: string | null;
@@ -66,6 +73,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
     writeOffLoan,
     createOrGetPortalShare,
   } = useApp();
+  const { licenseState, openUpgradePrompt } = useLicenseContext();
 
   const lang = i18n.language === 'km' ? 'km' : 'en';
   const useKh = Boolean(profile?.useKhmerNumerals);
@@ -219,6 +227,10 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportContract = async (loan: Loan) => {
+    if (!canExportContracts(licenseState)) {
+      openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'business_contracts');
+      return;
+    }
     const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     await exportLoanContractPdf({
@@ -234,6 +246,10 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportSchedulePdf = async (loan: Loan) => {
+    if (!canExport(licenseState)) {
+      openUpgradePrompt('pro_export');
+      return;
+    }
     const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     const input = buildCustomerScheduleInputFromLoan(
@@ -248,6 +264,10 @@ export const LoansView: React.FC<LoansViewProps> = ({
   };
 
   const handleExportScheduleExcel = async (loan: Loan) => {
+    if (!canExport(licenseState)) {
+      openUpgradePrompt('pro_export');
+      return;
+    }
     const schedules = await ensureSchedulesLoaded(loan.id);
     const borrower = borrowers.find((b) => b.id === loan.borrowerId);
     const input = buildCustomerScheduleInputFromLoan(
@@ -259,6 +279,18 @@ export const LoansView: React.FC<LoansViewProps> = ({
       profile?.lenderLogoDataUrl
     );
     exportLoanScheduleExcel(input);
+  };
+
+  const handleLoanRestructureAction = (
+    mode: 'renew' | 'topup' | 'restructure',
+    loan: Loan
+  ) => {
+    const remainingActive = loans.filter((l) => l.status === 'active' && l.id !== loan.id).length;
+    if (!canCreateLoan(licenseState, remainingActive)) {
+      openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'free_loan_limit');
+      return;
+    }
+    setActionModal({ mode, loan });
   };
 
   return (
@@ -629,7 +661,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
                           role="menuitem"
                           onClick={() => {
                             setMenuOpen(false);
-                            setActionModal({ mode: 'renew', loan: activeLoanDetail });
+                            handleLoanRestructureAction('renew', activeLoanDetail);
                           }}
                           className="w-full min-h-[40px] px-3.5 py-2 flex items-center gap-2.5 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
@@ -641,7 +673,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
                           role="menuitem"
                           onClick={() => {
                             setMenuOpen(false);
-                            setActionModal({ mode: 'topup', loan: activeLoanDetail });
+                            handleLoanRestructureAction('topup', activeLoanDetail);
                           }}
                           className="w-full min-h-[40px] px-3.5 py-2 flex items-center gap-2.5 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >
@@ -653,7 +685,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
                           role="menuitem"
                           onClick={() => {
                             setMenuOpen(false);
-                            setActionModal({ mode: 'restructure', loan: activeLoanDetail });
+                            handleLoanRestructureAction('restructure', activeLoanDetail);
                           }}
                           className="w-full min-h-[40px] px-3.5 py-2 flex items-center gap-2.5 text-left text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                         >

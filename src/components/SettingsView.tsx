@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2,
   Camera,
+  ChevronRight,
   Cloud,
   Database,
   Download,
+  FileText,
   HardDrive,
   Image as ImageIcon,
   Lock,
@@ -21,10 +23,20 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import {
+  canBackupExport,
+  canBackupRestore,
+  canUseStaffAccounts,
+  isReadOnly,
+} from '../lib/entitlements';
 import { compressLogoToDataUrl } from '../lib/finance';
 import type { AppLanguage, CurrencyCode } from '../types/loan';
 import { CameraCaptureModal } from './CameraCaptureModal';
+import { useLicenseContext } from './LicenseGate';
 import { PWAInstallButton } from './PWAInstallButton';
+import { SettingsLicenseCard } from './SettingsLicenseCard';
+import { SettingsTermsPrivacyView } from './SettingsTermsPrivacyView';
+import { useTermsContext } from './TermsGate';
 
 export const SettingsView: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -51,10 +63,14 @@ export const SettingsView: React.FC = () => {
     signInWithGoogle,
     signOut,
   } = useApp();
+  const { t: tTerms } = useTranslation('terms');
+  const { storedRecord, termsVersion } = useTermsContext();
+  const { licenseState, openUpgradePrompt } = useLicenseContext();
   const [signingIn, setSigningIn] = useState(false);
   const [importingDemo, setImportingDemo] = useState(false);
   const [clearingDemo, setClearingDemo] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [showTermsPrivacyPage, setShowTermsPrivacyPage] = useState(false);
 
   const hasDemoData =
     borrowers.some((b) => b.id.startsWith('demo_brw_')) ||
@@ -168,6 +184,10 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleExportBackup = () => {
+    if (!canBackupExport(licenseState)) {
+      openUpgradePrompt('pro_backup');
+      return;
+    }
     const json = exportAllDataJson();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -180,7 +200,12 @@ export const SettingsView: React.FC = () => {
 
   const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
+    if (!canBackupRestore(licenseState)) {
+      openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'pro_backup');
+      return;
+    }
     const text = await file.text();
     await importAllDataJson(text);
     showToast(t('settings.importSuccess'));
@@ -188,11 +213,19 @@ export const SettingsView: React.FC = () => {
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canUseStaffAccounts(licenseState)) {
+      openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'business_staff');
+      return;
+    }
     if (!staffName.trim()) return;
     await addStaffMember(staffName, staffPhone, staffRole);
     setStaffName('');
     setStaffPhone('');
   };
+
+  if (showTermsPrivacyPage) {
+    return <SettingsTermsPrivacyView onBack={() => setShowTermsPrivacyPage(false)} />;
+  }
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -208,6 +241,9 @@ export const SettingsView: React.FC = () => {
           {toast}
         </div>
       )}
+
+      {/* License & Plan */}
+      <SettingsLicenseCard onToast={showToast} />
 
       {/* Lender Profile */}
       <form
@@ -579,7 +615,15 @@ export const SettingsView: React.FC = () => {
             <span>{t('settings.exportBackup')}</span>
           </button>
 
-          <label className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 cursor-pointer">
+          <label
+            onClick={(e) => {
+              if (!canBackupRestore(licenseState)) {
+                e.preventDefault();
+                openUpgradePrompt(isReadOnly(licenseState) ? 'read_only' : 'pro_backup');
+              }
+            }}
+            className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 cursor-pointer"
+          >
             <Upload className="w-4 h-4 text-teal-600" />
             <span>{t('settings.importBackup')}</span>
             <input type="file" accept="application/json" className="hidden" onChange={handleImportBackup} />
@@ -717,6 +761,32 @@ export const SettingsView: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Terms and Privacy */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <FileText className="w-4 h-4 text-[#0F5132] dark:text-emerald-400 mt-0.5 shrink-0" />
+          <div className="space-y-0.5 min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              {tTerms('settings.cardTitle')}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {tTerms('settings.cardSubtitle')}
+            </p>
+            <p className="text-xs font-mono text-slate-600 dark:text-slate-300 pt-0.5">
+              v{storedRecord?.termsVersion || termsVersion} · {tTerms('settings.statusAccepted')}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowTermsPrivacyPage(true)}
+          className="min-h-[48px] inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shrink-0 whitespace-nowrap"
+        >
+          <span>{tTerms('settings.openPageButton')}</span>
+          <ChevronRight className="w-4 h-4 text-slate-400" />
+        </button>
       </div>
 
       {cameraOpen && (

@@ -15,6 +15,8 @@ import { BorrowersView } from './components/BorrowersView';
 import { CreateLoanModal } from './components/CreateLoanModal';
 import { DashboardView } from './components/DashboardView';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LicenseBanner } from './components/LicenseBanner';
+import { LicenseGate, useLicenseContext } from './components/LicenseGate';
 import { LoansView } from './components/LoansView';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PinLockModal } from './components/PinLockModal';
@@ -24,6 +26,11 @@ import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { RemindersReportsView } from './components/RemindersReportsView';
 import type { ReportsSubTab } from './components/RemindersReportsView';
 import { SettingsView } from './components/SettingsView';
+import { TermsGate } from './components/TermsGate';
+import {
+  canCreateBorrower,
+  getCreateLoanBlockReason,
+} from './lib/entitlements';
 import type { AgingBucketKey } from './lib/finance';
 import type { Loan, Payment } from './types/loan';
 
@@ -31,7 +38,8 @@ type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'settings';
 
 const MainShell: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, authReady, isPinLocked, profile, updateSettings } = useApp();
+  const { user, authReady, isPinLocked, profile, loans, updateSettings } = useApp();
+  const { licenseState, openUpgradePrompt } = useLicenseContext();
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [reportsSubTabRequest, setReportsSubTabRequest] = useState<{
@@ -49,6 +57,29 @@ const MainShell: React.FC = () => {
     payment: Payment;
     remainingAfter: number;
   } | null>(null);
+
+  const activeLoansCount = useMemo(
+    () => loans.filter((l) => l.status === 'active').length,
+    [loans]
+  );
+
+  const requestNewLoan = (borrowerId?: string) => {
+    const blockReason = getCreateLoanBlockReason(licenseState, activeLoansCount);
+    if (blockReason) {
+      openUpgradePrompt(blockReason);
+      return;
+    }
+    setShowCreateLoan({ open: true, borrowerId });
+  };
+
+  const requestAddBorrower = () => {
+    if (!canCreateBorrower(licenseState)) {
+      openUpgradePrompt('read_only');
+      return;
+    }
+    setActiveTab('borrowers');
+    setOpenAddBorrower(true);
+  };
 
   const toggleQuickLang = async () => {
     const next = i18n.language === 'km' ? 'en' : 'km';
@@ -223,13 +254,14 @@ const MainShell: React.FC = () => {
         </header>
 
         <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 lg:pb-8">
+          <div className="mb-4 -mx-4 sm:-mx-6 lg:-mx-8">
+            <LicenseBanner />
+          </div>
+
           {activeTab === 'dashboard' && (
             <DashboardView
-              onNewLoan={() => setShowCreateLoan({ open: true })}
-              onAddBorrower={() => {
-                setActiveTab('borrowers');
-                setOpenAddBorrower(true);
-              }}
+              onNewLoan={() => requestNewLoan()}
+              onAddBorrower={requestAddBorrower}
               onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
               onOpenLoanDetail={(loanId) => {
                 setSelectedLoanId(loanId);
@@ -250,7 +282,7 @@ const MainShell: React.FC = () => {
             <LoansView
               selectedLoanId={selectedLoanId}
               onSelectLoanId={setSelectedLoanId}
-              onNewLoan={() => setShowCreateLoan({ open: true })}
+              onNewLoan={() => requestNewLoan()}
               onRecordPayment={(loan) => setPaymentLoan(loan)}
             />
           )}
@@ -259,9 +291,7 @@ const MainShell: React.FC = () => {
             <BorrowersView
               externalOpenAdd={openAddBorrower}
               onCloseExternalAdd={() => setOpenAddBorrower(false)}
-              onNewLoanForBorrower={(borrowerId) =>
-                setShowCreateLoan({ open: true, borrowerId })
-              }
+              onNewLoanForBorrower={(borrowerId) => requestNewLoan(borrowerId)}
               onOpenLoanDetail={(loanId) => {
                 setSelectedLoanId(loanId);
                 setActiveTab('loans');
@@ -379,22 +409,22 @@ export default function App() {
     };
   }, []);
 
-  if (portalParams.shareId || portalParams.encodedData) {
-    return (
-      <ErrorBoundary>
-        <BorrowerPortalView
-          shareId={portalParams.shareId}
-          encodedData={portalParams.encodedData}
-        />
-      </ErrorBoundary>
-    );
-  }
-
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <MainShell />
-      </AppProvider>
+      <TermsGate>
+        {portalParams.shareId || portalParams.encodedData ? (
+          <BorrowerPortalView
+            shareId={portalParams.shareId}
+            encodedData={portalParams.encodedData}
+          />
+        ) : (
+          <LicenseGate>
+            <AppProvider>
+              <MainShell />
+            </AppProvider>
+          </LicenseGate>
+        )}
+      </TermsGate>
     </ErrorBoundary>
   );
 }
