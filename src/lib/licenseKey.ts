@@ -269,14 +269,35 @@ export function extractLicenseKeyFromText(rawText: string): string {
   const trimmed = rawText.trim();
   if (!trimmed) return '';
 
-  // Match KC1-... token anywhere in pasted text or a .kamchi-license file
-  const match = trimmed.match(/KC1-[A-Z2-7\-\s]+/i);
-  if (match) {
-    const cleanedBody = match[0].slice(4).replace(/[^A-Za-z2-7]/g, '').toUpperCase();
+  // 1. Prefer a contiguous KC1-... token (QR payloads, URLs, .kamchi-license files)
+  const contiguousMatch = trimmed.match(/KC1-[A-Z2-7-]+/i);
+  if (contiguousMatch) {
+    const cleanedBody = contiguousMatch[0]
+      .slice(4)
+      .replace(/[^A-Za-z2-7]/g, '')
+      .toUpperCase();
+    if (cleanedBody.length >= 144) {
+      return formatLicenseKeyGroups(cleanedBody.slice(0, 144));
+    }
     if (cleanedBody.length > 0) {
       return formatLicenseKeyGroups(cleanedBody);
     }
   }
+
+  // 2. Fallback: KC1-... key wrapped across spaces or line breaks
+  const wrappedMatch = trimmed.match(/KC1-[A-Z2-7\-\s]+/i);
+  if (wrappedMatch) {
+    const cleanedBody = wrappedMatch[0]
+      .slice(4)
+      .replace(/[^A-Za-z2-7]/g, '')
+      .toUpperCase();
+    if (cleanedBody.length > 0) {
+      return formatLicenseKeyGroups(
+        cleanedBody.length >= 144 ? cleanedBody.slice(0, 144) : cleanedBody
+      );
+    }
+  }
+
   return trimmed;
 }
 

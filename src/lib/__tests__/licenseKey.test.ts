@@ -191,5 +191,8 @@ describe('licenseKey module (encoding, verification & device binding)', () => {
       publicKeyHex,
     });
     assert.equal(verified.valid, true);
+
+    const qrWithTrailingLabel = `${key}\nPlan: Pro`;
+    assert.equal(extractLicenseKeyFromText(qrWithTrailingLabel), key);
   });
 });

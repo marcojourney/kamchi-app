@@ -468,6 +468,7 @@ export const LicenseActivationScreen: React.FC<LicenseActivationScreenProps> = (
         {qrOpen && (
           <QrScannerModal
             onDetected={(detectedKey) => {
+              setErrorCode(null);
               setKeyInput(detectedKey);
               setQrOpen(false);
             }}
@@ -576,6 +577,7 @@ export const LicenseActivationScreen: React.FC<LicenseActivationScreenProps> = (
       {qrOpen && (
         <QrScannerModal
           onDetected={(detectedKey) => {
+            setErrorCode(null);
             setKeyInput(detectedKey);
             setQrOpen(false);
           }}

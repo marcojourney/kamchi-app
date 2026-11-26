@@ -52,9 +52,11 @@
     "subtitle": "Point your camera at the KC1 license QR code.",
     "uploadFallback": "Choose QR image",
     "startingCamera": "Starting camera...",
-    "unsupported": "Live QR camera scanning is not supported on this browser. Please paste your key or import the .kamchi-license file instead.",
-    "permissionDenied": "Camera access was denied. Enable camera permission or paste your license key directly.",
-    "noQrFoundInImage": "No valid KamChi license QR code was found in that image.",
+    "unsupported": "Live camera is unavailable here. Use \"Choose QR image\" below or paste your license key.",
+    "permissionDenied": "Camera access was denied. Enable camera permission, choose a QR image below, or paste your key.",
+    "noQrFoundInImage": "No QR code was found in that image. Make sure the QR code is clear and try again.",
+    "notKamChiQr": "A QR code was detected, but it does not contain a KamChi (KC1-) license key.",
+    "switchCamera": "Switch camera",
     "cancel": "Cancel"
   },
   "errors": {
