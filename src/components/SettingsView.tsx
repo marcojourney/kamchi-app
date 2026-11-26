@@ -33,6 +33,7 @@ import { compressLogoToDataUrl } from '../lib/finance';
 import type { AppLanguage, CurrencyCode } from '../types/loan';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { useLicenseContext } from './LicenseGate';
+import { NotificationSettingsSection } from './NotificationSettingsSection';
 import { PWAInstallButton } from './PWAInstallButton';
 import { SettingsLicenseCard } from './SettingsLicenseCard';
 import { SettingsTermsPrivacyView } from './SettingsTermsPrivacyView';
@@ -476,6 +477,9 @@ export const SettingsView: React.FC = () => {
           {t('settings.saveSettings')}
         </button>
       </form>
+
+      {/* Notifications & Reminders */}
+      <NotificationSettingsSection onToast={showToast} />
 
       {/* PIN Lock */}
       <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-3">

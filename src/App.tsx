@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppProvider, useApp } from './context/AppContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { AppSkeleton } from './components/AppSkeleton';
 import { BorrowerPortalView } from './components/BorrowerPortalView';
 import { BorrowersView } from './components/BorrowersView';
@@ -18,7 +19,10 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { LicenseBanner } from './components/LicenseBanner';
 import { LicenseGate, useLicenseContext } from './components/LicenseGate';
 import { LoansView } from './components/LoansView';
+import { NotificationBell } from './components/NotificationBell';
+import { NotificationCenterModal } from './components/NotificationCenterModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { PaymentUndoToast } from './components/PaymentUndoToast';
 import { PinLockModal } from './components/PinLockModal';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { ReceiptModal } from './components/ReceiptModal';
@@ -220,6 +224,8 @@ const MainShell: React.FC = () => {
               </button>
             </div>
 
+            <NotificationBell />
+
             <button
               type="button"
               onClick={() => setActiveTab('settings')}
@@ -395,6 +401,24 @@ const MainShell: React.FC = () => {
           onClose={() => setReceiptData(null)}
         />
       )}
+
+      <NotificationCenterModal
+        onRecordPayment={(loan) => setPaymentLoan(loan)}
+        onOpenLoanDetail={(loanId) => {
+          setSelectedLoanId(loanId);
+          setActiveTab('loans');
+        }}
+        onOpenSettings={() => {
+          setActiveTab('settings');
+          window.setTimeout(() => {
+            document
+              .getElementById('notifications-settings')
+              ?.scrollIntoView({ behavior: 'smooth' });
+          }, 80);
+        }}
+      />
+
+      <PaymentUndoToast />
     </div>
   );
 };
@@ -420,7 +444,9 @@ export default function App() {
         ) : (
           <LicenseGate>
             <AppProvider>
-              <MainShell />
+              <NotificationProvider>
+                <MainShell />
+              </NotificationProvider>
             </AppProvider>
           </LicenseGate>
         )}

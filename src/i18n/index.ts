@@ -6,18 +6,30 @@ import termsEn from './terms.en.json';
 import termsKm from './terms.km.json';
 import licenseEn from './license.en.json';
 import licenseKm from './license.km.json';
+import notificationsEn from './notifications.en.json';
+import notificationsKm from './notifications.km.json';
 
 const browserLang =
   typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('km') ? 'km' : 'en';
 
 i18n.use(initReactI18next).init({
   resources: {
-    en: { translation: en, terms: termsEn, license: licenseEn },
-    km: { translation: km, terms: termsKm, license: licenseKm },
+    en: {
+      translation: en,
+      terms: termsEn,
+      license: licenseEn,
+      notifications: notificationsEn,
+    },
+    km: {
+      translation: km,
+      terms: termsKm,
+      license: licenseKm,
+      notifications: notificationsKm,
+    },
   },
   lng: browserLang,
   fallbackLng: 'en',
-  ns: ['translation', 'terms', 'license'],
+  ns: ['translation', 'terms', 'license', 'notifications'],
   defaultNS: 'translation',
   interpolation: {
     escapeValue: false,
@@ -32,4 +44,3 @@ if (typeof document !== 'undefined') {
 }
 
 export default i18n;
-

@@ -63,6 +63,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
   onRecordPayment,
 }) => {
   const { t, i18n } = useTranslation();
+  const { t: tNotif } = useTranslation('notifications');
   const {
     loans,
     borrowers,
@@ -70,6 +71,7 @@ export const LoansView: React.FC<LoansViewProps> = ({
     profile,
     todayIso,
     ensureSchedulesLoaded,
+    setLoanPromiseToPay,
     writeOffLoan,
     createOrGetPortalShare,
   } = useApp();
@@ -780,6 +782,47 @@ export const LoansView: React.FC<LoansViewProps> = ({
             {activeLoanDetail.collateralText && (
               <div className="text-xs text-slate-600 dark:text-slate-300">
                 <strong>{t('loans.collateral')}:</strong> {activeLoanDetail.collateralText}
+              </div>
+            )}
+
+            {activeLoanDetail.status === 'active' && (
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <label
+                    htmlFor="loan-promise-to-pay"
+                    className="block text-xs font-semibold text-slate-800 dark:text-slate-100"
+                  >
+                    {tNotif('promiseToPay.label')}
+                  </label>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {tNotif('promiseToPay.hint')}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    id="loan-promise-to-pay"
+                    type="date"
+                    value={activeLoanDetail.promiseToPayDate || ''}
+                    onChange={(e) =>
+                      void setLoanPromiseToPay(
+                        activeLoanDetail.id,
+                        e.target.value || null
+                      )
+                    }
+                    className="min-h-[40px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono"
+                  />
+                  {activeLoanDetail.promiseToPayDate && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void setLoanPromiseToPay(activeLoanDetail.id, null)
+                      }
+                      className="min-h-[40px] rounded-xl border border-slate-300 dark:border-slate-700 px-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      {tNotif('promiseToPay.clear')}
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

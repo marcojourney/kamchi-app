@@ -46,6 +46,7 @@ import {
   type LocalWorkspaceData,
 } from '../lib/localStore';
 import { buildDemoWorkspaceBundle, DEMO_CASH_KHR, DEMO_CASH_USD } from '../lib/demoData';
+import { emitPaymentRecorded, emitPaymentUndone } from '../lib/notificationEvents';
 import type {
   AppLanguage,
   AuditLog,
@@ -73,6 +74,7 @@ export interface CreateBorrowerInput {
   guarantorPhone?: string;
   guarantorPhotoDataUrl?: string;
   notes?: string;
+  preferredLang?: AppLanguage;
   tags?: string[];
 }
 
@@ -134,6 +136,8 @@ interface AppContextValue {
   deleteBorrower: (id: string) => Promise<void>;
   createLoan: (input: CreateLoanInput) => Promise<string>;
   recordPayment: (input: RecordPaymentInput) => Promise<Payment>;
+  undoPayment: (paymentId: string) => Promise<boolean>;
+  setLoanPromiseToPay: (loanId: string, promiseDate: string | null) => Promise<void>;
   earlySettleLoan: (loanId: string, method: PaymentMethod, paymentDate: string) => Promise<Payment>;
   writeOffLoan: (loanId: string) => Promise<void>;
   renewOrRestructureLoan: (
@@ -656,6 +660,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .trim()
         .slice(0, 120);
 
+      const rateChanged =
+        updates.exchangeRateKhr !== undefined &&
+        Number(updates.exchangeRateKhr) !== Number(profile.exchangeRateKhr);
+      const nextRateUpdatedAt =
+        updates.exchangeRateUpdatedAt ??
+        (rateChanged ? new Date().toISOString() : profile.exchangeRateUpdatedAt);
+
       if (!user) {
         await commitLocal((prev) => ({
           ...prev,
@@ -665,6 +676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             preferredLang: updates.preferredLang ?? prev.profile.preferredLang,
             defaultCurrency: updates.defaultCurrency ?? prev.profile.defaultCurrency,
             exchangeRateKhr: Number(updates.exchangeRateKhr ?? prev.profile.exchangeRateKhr) || 4100,
+            exchangeRateUpdatedAt: nextRateUpdatedAt,
             capitalCashUsd: Number(updates.capitalCashUsd ?? prev.profile.capitalCashUsd ?? 0),
             capitalCashKhr: Number(updates.capitalCashKhr ?? prev.profile.capitalCashKhr ?? 0),
             useKhmerNumerals: Boolean(updates.useKhmerNumerals ?? prev.profile.useKhmerNumerals ?? false),
@@ -697,6 +709,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         biometricEnabled: Boolean(updates.biometricEnabled ?? profile.biometricEnabled ?? false),
         updatedAt: serverTimestamp(),
       };
+      if (nextRateUpdatedAt) {
+        payload.exchangeRateUpdatedAt = nextRateUpdatedAt;
+      }
       if (updates.lenderPhone !== undefined) {
         payload.lenderPhone = updates.lenderPhone.trim().slice(0, 40);
       } else if (profile.lenderPhone !== undefined) {
@@ -795,6 +810,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           newBorrower.guarantorPhotoDataUrl = input.guarantorPhotoDataUrl.slice(0, 200000);
         }
         if (input.notes?.trim()) newBorrower.notes = input.notes.trim().slice(0, 1000);
+        if (input.preferredLang === 'en' || input.preferredLang === 'km') {
+          newBorrower.preferredLang = input.preferredLang;
+        }
 
         await commitLocal((prev) => ({
           ...prev,
@@ -822,6 +840,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (input.guarantorPhone?.trim()) payload.guarantorPhone = input.guarantorPhone.trim().slice(0, 40);
       if (input.guarantorPhotoDataUrl) payload.guarantorPhotoDataUrl = input.guarantorPhotoDataUrl.slice(0, 200000);
       if (input.notes?.trim()) payload.notes = input.notes.trim().slice(0, 1000);
+      if (input.preferredLang === 'en' || input.preferredLang === 'km') {
+        payload.preferredLang = input.preferredLang;
+      }
 
       try {
         await setDoc(doc(db, 'borrowers', id), payload);
@@ -875,6 +896,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               ? input.guarantorPhotoDataUrl.slice(0, 200000)
               : existing.guarantorPhotoDataUrl,
           notes: (input.notes !== undefined ? input.notes : existing.notes)?.trim().slice(0, 1000) || undefined,
+          preferredLang:
+            input.preferredLang !== undefined
+              ? input.preferredLang
+              : existing.preferredLang,
           updatedAt: new Date().toISOString(),
         };
         await commitLocal((prev) => ({
@@ -914,6 +939,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (gPhoto !== undefined) payload.guarantorPhotoDataUrl = gPhoto.slice(0, 200000);
       const notes = input.notes !== undefined ? input.notes : existing.notes;
       if (notes?.trim()) payload.notes = notes.trim().slice(0, 1000);
+      if (input.preferredLang !== undefined) {
+        payload.preferredLang = input.preferredLang ?? '';
+      }
 
       try {
         await updateDoc(doc(db, 'borrowers', id), payload);
@@ -1255,6 +1283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           paymentId,
           `Recorded ${loan.currency} ${input.amount} payment from ${loan.borrowerName}`
         );
+        emitPaymentRecorded(localPayment);
         return localPayment;
       }
 
@@ -1319,7 +1348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedAt: serverTimestamp(),
         });
 
-        return {
+        const cloudPayment: Payment = {
           id: paymentId,
           ownerId: user.uid,
           loanId: loan.id,
@@ -1338,11 +1367,189 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           gpsLat: input.gpsLat,
           gpsLng: input.gpsLng,
         };
+        emitPaymentRecorded(cloudPayment);
+        return cloudPayment;
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `payments/${paymentId}`);
       }
     },
     [user, loans, schedulesByLoan, todayIso, writeAuditLog, syncPortalIfShared, commitLocal]
+  );
+
+  const undoPayment = useCallback(
+    async (paymentId: string): Promise<boolean> => {
+      const target = payments.find((p) => p.id === paymentId);
+      if (!target) return false;
+      const loan = loans.find((l) => l.id === target.loanId);
+      if (!loan) return false;
+
+      let baseSchedules = schedulesByLoan[loan.id];
+      if (!baseSchedules) {
+        baseSchedules = await ensureSchedulesLoaded(loan.id);
+      }
+
+      const remainingPayments = payments
+        .filter((p) => p.id !== paymentId && p.loanId === loan.id)
+        .sort((a, b) => (a.paymentDate || '').localeCompare(b.paymentDate || ''));
+
+      let replayLoan: Loan = {
+        ...loan,
+        paidPrincipal: 0,
+        paidInterest: 0,
+        paidPenalty: 0,
+        outstandingBalance: loan.totalPayable,
+        status: loan.status === 'settled' ? 'active' : loan.status,
+      };
+      let replaySchedules: LoanSchedule[] = baseSchedules.map((s) => ({
+        ...s,
+        principalPaid: 0,
+        interestPaid: 0,
+        penaltyPaid: 0,
+        status: s.dueDate < todayIso ? 'overdue' : 'pending',
+        paidAt: undefined,
+      }));
+
+      for (const p of remainingPayments) {
+        const alloc = allocatePaymentAcrossSchedules({
+          amount: p.amount,
+          loan: replayLoan,
+          schedules: replaySchedules,
+          todayIso: p.paymentDate || todayIso,
+        });
+        replayLoan = {
+          ...replayLoan,
+          paidPrincipal: alloc.newPaidPrincipal,
+          paidInterest: alloc.newPaidInterest,
+          paidPenalty: alloc.newPaidPenalty,
+          outstandingBalance: alloc.newOutstandingBalance,
+          status: alloc.newStatus,
+        };
+        replaySchedules = replaySchedules.map((s) => {
+          const u = alloc.updatedSchedules.find((item) => item.id === s.id);
+          return u ? { ...s, ...u } : s;
+        });
+      }
+
+      const nowIso = new Date().toISOString();
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          payments: prev.payments.filter((p) => p.id !== paymentId),
+          loans: prev.loans.map((l) =>
+            l.id === loan.id
+              ? {
+                  ...l,
+                  paidPrincipal: replayLoan.paidPrincipal,
+                  paidInterest: replayLoan.paidInterest,
+                  paidPenalty: replayLoan.paidPenalty,
+                  outstandingBalance: replayLoan.outstandingBalance,
+                  status: replayLoan.status,
+                  updatedAt: nowIso,
+                }
+              : l
+          ),
+          schedulesByLoan: {
+            ...prev.schedulesByLoan,
+            [loan.id]: replaySchedules,
+          },
+        }));
+        await writeAuditLog(
+          'undo_payment',
+          'payment',
+          paymentId,
+          `Undid ${target.currency} ${target.amount} payment from ${target.borrowerName}`
+        );
+        emitPaymentUndone(paymentId);
+        return true;
+      }
+
+      const batch = writeBatch(db);
+      batch.delete(doc(db, 'payments', paymentId));
+      batch.update(doc(db, 'loans', loan.id), {
+        paidPrincipal: replayLoan.paidPrincipal ?? 0,
+        paidInterest: replayLoan.paidInterest ?? 0,
+        paidPenalty: replayLoan.paidPenalty ?? 0,
+        outstandingBalance: replayLoan.outstandingBalance,
+        status: replayLoan.status,
+        updatedAt: serverTimestamp(),
+      });
+      for (const sch of replaySchedules) {
+        batch.update(doc(db, 'loans', loan.id, 'schedules', sch.id), {
+          principalPaid: sch.principalPaid,
+          interestPaid: sch.interestPaid,
+          penaltyPaid: sch.penaltyPaid,
+          status: sch.status,
+          paidAt: sch.paidAt ?? '',
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      try {
+        await batch.commit();
+        await writeAuditLog(
+          'undo_payment',
+          'payment',
+          paymentId,
+          `Undid ${target.currency} ${target.amount} payment from ${target.borrowerName}`
+        );
+        await syncPortalIfShared(
+          loan,
+          replayLoan.outstandingBalance,
+          replayLoan.status,
+          replaySchedules
+        );
+        emitPaymentUndone(paymentId);
+        return true;
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `payments/${paymentId}`);
+        return false;
+      }
+    },
+    [
+      user,
+      payments,
+      loans,
+      schedulesByLoan,
+      todayIso,
+      ensureSchedulesLoaded,
+      commitLocal,
+      writeAuditLog,
+      syncPortalIfShared,
+    ]
+  );
+
+  const setLoanPromiseToPay = useCallback(
+    async (loanId: string, promiseDate: string | null) => {
+      const loan = loans.find((l) => l.id === loanId);
+      if (!loan) return;
+      const cleanDate = promiseDate?.trim() ? promiseDate.trim().slice(0, 10) : '';
+
+      if (!user) {
+        await commitLocal((prev) => ({
+          ...prev,
+          loans: prev.loans.map((l) =>
+            l.id === loanId
+              ? {
+                  ...l,
+                  promiseToPayDate: cleanDate || undefined,
+                  updatedAt: new Date().toISOString(),
+                }
+              : l
+          ),
+        }));
+        return;
+      }
+
+      try {
+        await updateDoc(doc(db, 'loans', loanId), {
+          promiseToPayDate: cleanDate,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `loans/${loanId}`);
+      }
+    },
+    [user, loans, commitLocal]
   );
 
   const earlySettleLoan = useCallback(
@@ -2124,6 +2331,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteBorrower,
     createLoan,
     recordPayment,
+    undoPayment,
+    setLoanPromiseToPay,
     earlySettleLoan,
     writeOffLoan,
     renewOrRestructureLoan,

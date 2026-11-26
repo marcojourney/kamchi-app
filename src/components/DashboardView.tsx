@@ -20,6 +20,8 @@ import {
 } from '../lib/finance';
 import type { AgingBucketKey } from '../lib/finance';
 import type { CurrencyCode, Loan } from '../types/loan';
+import { ActionNeededStrip } from './ActionNeededStrip';
+import { DailySummaryBanner } from './DailySummaryBanner';
 
 interface DashboardViewProps {
   onNewLoan: () => void;
@@ -230,6 +232,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
       </div>
+
+      <DailySummaryBanner />
+      <ActionNeededStrip />
 
       {/* Primary KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

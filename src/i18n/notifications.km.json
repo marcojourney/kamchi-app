@@ -1,0 +1,214 @@
+{
+  "bell": {
+    "openCenter": "បើកការជូនដំណឹង",
+    "unreadCount": "មានការជូនដំណឹងមិនទាន់អាន {{count}}",
+    "newAlertsAnnounce": "មានការជូនដំណឹងថ្មី {{count}}"
+  },
+  "center": {
+    "title": "ការជូនដំណឹង",
+    "subtitle": "ការដាស់តឿនការបង់ប្រាក់ និងកម្ចីក្រៅបណ្តាញ",
+    "markAllRead": "សម្គាល់ថាបានអានទាំងអស់",
+    "privacyToggle": "លាក់ព័ត៌មានលម្អិត",
+    "privacyActiveHint": "ឈ្មោះអ្នកខ្ចី និងចំនួនប្រាក់ត្រូវបានលាក់ក្នុងផ្ទាំងដំណឹង។",
+    "close": "បិទ",
+    "emptyTitle": "បានពិនិត្យរួចរាល់ទាំងអស់",
+    "emptyBody": "មិនមានការជូនដំណឹងត្រូវតាមតម្រងនេះនៅពេលនេះទេ។",
+    "filters": {
+      "all": "ទាំងអស់",
+      "unread": "មិនទាន់អាន",
+      "overdue": "បង់យឺត",
+      "due_soon": "ជិតដល់ថ្ងៃសង"
+    },
+    "groups": {
+      "today": "ថ្ងៃនេះ",
+      "this_week": "សប្តាហ៍នេះ",
+      "earlier": "មុនៗ"
+    },
+    "cluster": {
+      "dueToday": "មាន {{count}} វគ្គត្រូវបង់ថ្ងៃនេះ",
+      "dueTomorrow": "មាន {{count}} វគ្គត្រូវបង់ថ្ងៃស្អែក",
+      "dueInDays": "មាន {{count}} វគ្គជិតដល់ថ្ងៃបង់",
+      "overdue_1": "មាន {{count}} វគ្គបង់យឺត ១+ ថ្ងៃ",
+      "overdue_3": "មាន {{count}} វគ្គបង់យឺត ៣+ ថ្ងៃ",
+      "overdue_7": "មាន {{count}} វគ្គបង់យឺត ៧+ ថ្ងៃ",
+      "overdue_30plus": "មាន {{count}} វគ្គបង់យឺត ៣០+ ថ្ងៃ",
+      "expand": "បង្ហាញបញ្ជី",
+      "collapse": "លាក់បញ្ជី"
+    },
+    "priorityLabels": {
+      "high": "បង់យឺត / បន្ទាន់",
+      "medium": "ជិតដល់ថ្ងៃសង / យកចិត្តទុកដាក់",
+      "low": "ដំណឹងល្អ / យោបល់",
+      "info": "ព័ត៌មាន"
+    },
+    "snoozedTag": "បានផ្អាក",
+    "readTag": "បានអាន"
+  },
+  "actions": {
+    "recordPayment": "កត់ត្រាការបង់",
+    "sendReminder": "ផ្ញើសាររំលឹក",
+    "callBorrower": "ហៅទូរស័ព្ទ",
+    "snooze": "ផ្អាក",
+    "snooze1d": "ផ្អាក ១ ថ្ងៃ",
+    "snooze3d": "ផ្អាក ៣ ថ្ងៃ",
+    "snoozeUntilDue": "ដល់ថ្ងៃត្រូវសង",
+    "markRead": "សម្គាល់ថាបានអាន",
+    "dismiss": "បិទចោល",
+    "undo": "មិនធ្វើវិញ",
+    "openTerms": "ពិនិត្យលក្ខខណ្ឌ",
+    "reloadApp": "ធ្វើបច្ចុប្បន្នភាព",
+    "openSettings": "កែសម្រួលអត្រាប្តូរប្រាក់"
+  },
+  "dashboard": {
+    "actionNeededTitle": "ត្រូវចាត់ការថ្ងៃនេះ",
+    "actionNeededSummary": "បង់យឺត {{overdueCount}} · ដល់ថ្ងៃសងថ្ងៃនេះ {{dueCount}}",
+    "actionNeededHidden": "មានការបង់ប្រាក់ដែលត្រូវពិនិត្យថ្ងៃនេះ",
+    "viewAll": "មើលទាំងអស់",
+    "dailySummaryTitle": "សង្ខេបប្រចាំថ្ងៃ",
+    "expectedToday": "រំពឹងទទួលថ្ងៃនេះ",
+    "collectedToday": "ប្រមូលបានថ្ងៃនេះ",
+    "overdueTotal": "ប្រាក់បង់យឺតសរុប",
+    "hiddenValue": "បានលាក់",
+    "dismissSummary": "បិទ"
+  },
+  "undoToast": {
+    "title": "បានកត់ត្រាការបង់ប្រាក់",
+    "body": "{{borrowerName}} · {{amountFormatted}}",
+    "bodyHidden": "បានរក្សាទុកការបង់ប្រាក់ក្នុងឧបករណ៍",
+    "undo": "មិនធ្វើវិញ",
+    "undone": "បានត្រឡប់ការបង់ប្រាក់វិញ"
+  },
+  "privacy": {
+    "hiddenBorrower": "អ្នកខ្ចី",
+    "hiddenAmount": "•••"
+  },
+  "items": {
+    "due_soon": {
+      "titleToday": "{{borrowerName}} — ដល់ថ្ងៃបង់ថ្ងៃនេះ",
+      "titleUpcoming": "{{borrowerName}} — ជិតដល់ថ្ងៃបង់",
+      "bodyToday": "វគ្គទី #{{installmentNumber}} ({{amountFormatted}}) ត្រូវបង់ថ្ងៃនេះ ({{dueDate}})។",
+      "bodyTomorrow": "វគ្គទី #{{installmentNumber}} ({{amountFormatted}}) ត្រូវបង់ថ្ងៃស្អែក ({{dueDate}})។",
+      "bodyInDays": "វគ្គទី #{{installmentNumber}} ({{amountFormatted}}) នឹងត្រូវបង់ក្នុង {{daysUntil}} ថ្ងៃទៀត ({{dueDate}})។"
+    },
+    "overdue": {
+      "title_1": "{{borrowerName}} — បង់យឺត ({{daysLate}} ថ្ងៃ)",
+      "title_3": "{{borrowerName}} — បង់យឺត ៣+ ថ្ងៃ",
+      "title_7": "{{borrowerName}} — បង់យឺត ៧+ ថ្ងៃ",
+      "title_30plus": "{{borrowerName}} — បង់យឺត ៣០+ ថ្ងៃ",
+      "body": "វគ្គទី #{{installmentNumber}} ({{amountFormatted}}) ត្រូវបង់ថ្ងៃទី {{dueDate}} (យឺត {{daysLate}} ថ្ងៃ)។"
+    },
+    "missed_installments": {
+      "title": "{{borrowerName}} — ខកខាន {{count}} វគ្គ",
+      "body": "មាន {{count}} វគ្គហួសកំណត់មិនទាន់បង់។ សមតុល្យនៅសល់៖ {{amountFormatted}}។"
+    },
+    "promise_broken": {
+      "title": "{{borrowerName}} — ផុតថ្ងៃសន្យាបង់",
+      "body": "ថ្ងៃសន្យាសង ({{promiseDate}}) បានផុត {{daysLate}} ថ្ងៃហើយដោយគ្មានការបង់។ សមតុល្យ៖ {{amountFormatted}}។"
+    },
+    "partial_payment": {
+      "title": "{{borrowerName}} — បង់បានមួយផ្នែក",
+      "body": "វគ្គទី #{{installmentNumber}} បានបង់ {{paidFormatted}} នៅសល់ {{remainingFormatted}} (ថ្ងៃសង {{dueDate}})។"
+    },
+    "payment_recorded": {
+      "title": "បានកត់ត្រាការបង់ — {{borrowerName}}",
+      "body": "ទទួលបាន {{amountFormatted}} នៅថ្ងៃទី {{paymentDate}}។"
+    },
+    "loan_fully_paid": {
+      "title": "បានបង់ផ្តាច់កម្ចីរួចរាល់ — {{borrowerName}}",
+      "body": "ទឹកប្រាក់សរុប {{amountFormatted}} ត្រូវបានទូទាត់រួចរាល់។",
+      "bodyWithCollateral": "ទឹកប្រាក់សរុប {{amountFormatted}} ត្រូវបានទូទាត់រួច។ សូមកុំភ្លេចប្រគល់វត្ថុបញ្ចាំវិញ៖ {{collateralText}}។"
+    },
+    "loan_maturing": {
+      "title": "កម្ចីជិតបញ្ចប់ — {{borrowerName}}",
+      "body": "វគ្គចុងក្រោយ ({{amountFormatted}}) ដល់កំណត់ក្នុង {{days}} ថ្ងៃទៀត ({{dueDate}})។"
+    },
+    "interest_only_ending": {
+      "title": "ជិតផុតរយៈពេលបង់តែការប្រាក់ — {{borrowerName}}",
+      "body": "ប្រាក់ដើមចុងក្រោយ ({{amountFormatted}}) ដល់ថ្ងៃសងក្នុង {{days}} ថ្ងៃទៀត ({{dueDate}})។"
+    },
+    "penalty_started": {
+      "title": "ចាប់ផ្តើមគិតប្រាក់ពិន័យ — {{borrowerName}}",
+      "body": "រយៈពេលអនុគ្រោះ ({{graceDays}} ថ្ងៃ) បានផុតសម្រាប់វគ្គថ្ងៃទី {{dueDate}}។ ចំនួនត្រូវបង់៖ {{amountFormatted}}។"
+    },
+    "daily_summary": {
+      "title": "សង្ខេបប្រចាំថ្ងៃ ({{dateIso}})",
+      "body": "រំពឹងទទួលថ្ងៃនេះ៖ {{expectedTodayFormatted}} · ប្រមូលបាន៖ {{collectedTodayFormatted}} · បង់យឺត៖ {{overdueTotalFormatted}}។"
+    },
+    "weekly_summary": {
+      "title": "សង្ខេបប្រចាំសប្តាហ៍ ({{weekKey}})",
+      "body": "ប្រមូលបាន៖ {{collectedFormatted}} · កម្ចីថ្មី៖ {{newLoansCount}} · ការប្រាក់រកបាន៖ {{interestFormatted}} · ហានិភ័យ៖ {{parFormatted}}។"
+    },
+    "terms_updated": {
+      "title": "លក្ខខណ្ឌត្រូវបានធ្វើបច្ចុប្បន្នភាព (v{{version}})",
+      "body": "លក្ខខណ្ឌប្រើប្រាស់ និងភាពឯកជនថ្មីរបស់ KamChi អាចពិនិត្យបានឥឡូវនេះ។"
+    },
+    "app_update_available": {
+      "title": "មានកំណែកម្មវិធីថ្មី",
+      "body": "មានកំណែថ្មីនៃកម្មវិធី KamChi។ សូមផ្ទុកឡើងវិញដើម្បីធ្វើបច្ចុប្បន្នភាព។"
+    },
+    "repeated_late": {
+      "title": "យោបល់៖ អ្នកខ្ចីបង់យឺតជាប់គ្នា",
+      "body": "{{borrowerName}} បានបង់យឺត {{streak}} វគ្គជាប់គ្នា។ គួររំលឹកមុន ឬពិចារណារយៈពេលខ្លីជាងមុន។"
+    },
+    "holiday_tomorrow": {
+      "title": "ថ្ងៃស្អែកជាថ្ងៃឈប់សម្រាក៖ {{holidayName}}",
+      "body": "មាន {{dueCount}} វគ្គត្រូវបង់នៅថ្ងៃទី {{dateIso}}។ អ្នកខ្ចីអាចសុំផ្លាស់ប្តូរថ្ងៃប្រមូលប្រាក់។"
+    },
+    "exchange_rate_stale": {
+      "title": "យោបល់៖ ពិនិត្យអត្រាប្តូរប្រាក់ USD/KHR",
+      "body": "អត្រាប្តូរប្រាក់ (1 USD = {{rate}} ៛) មិនទាន់បានធ្វើបច្ចុប្បន្នភាព {{daysSinceUpdate}} ថ្ងៃហើយ។"
+    }
+  },
+  "settings": {
+    "sectionTitle": "ការជូនដំណឹង និងសាររំលឹក",
+    "sectionDesc": "កំណត់ការដាស់តឿនក្រៅបណ្តាញ ម៉ោងស្ងាត់ និងគំរូសាររំលឹកដោយគួរសម។",
+    "categoriesLabel": "ប្រភេទការជូនដំណឹង",
+    "categories": {
+      "repayment": "ការសងប្រាក់ (ជិតដល់ថ្ងៃ បង់យឺត ថ្ងៃសន្យា)",
+      "lifecycle": "ស្ថានភាពកម្ចី (បង់ផ្តាច់ ជិតចប់ ពិន័យ)",
+      "summary": "សង្ខេបប្រចាំថ្ងៃ និងប្រចាំសប្តាហ៍",
+      "app": "ការធ្វើបច្ចុប្បន្នភាពកម្មវិធី និងលក្ខខណ្ឌ",
+      "suggestions": "យោបល់ឆ្លាតវៃ (ថ្ងៃបុណ្យ អត្រាប្តូរប្រាក់ ទម្លាប់បង់)"
+    },
+    "leadDaysLabel": "រំលឹកមុនថ្ងៃកំណត់",
+    "leadDaysOption": "{{days}} ថ្ងៃមុន",
+    "quietHoursLabel": "ម៉ោងស្ងាត់",
+    "quietHoursDesc": "ផ្អាកផ្ទាំងដំណឹងលោតឡើងក្នុងម៉ោងសម្រាក។",
+    "quietStart": "ចាប់ពីម៉ោង",
+    "quietEnd": "ដល់ម៉ោង",
+    "dailySummaryTime": "ម៉ោងបង្ហាញសង្ខេបប្រចាំថ្ងៃ",
+    "firstOverdueOffset": "ចំនួនថ្ងៃពន្យារមុនរាប់ថាបង់យឺត",
+    "firstOverdueOffsetHint": "រង់ចាំប៉ុន្មានថ្ងៃក្រោយថ្ងៃសង មុននឹងជូនដំណឹងថាបង់យឺត (គួបផ្សំជាមួយថ្ងៃអនុគ្រោះរបស់កម្ចី)។",
+    "defaultReminderLang": "ភាសាសម្រាប់សាររំលឹក",
+    "defaultChannel": "បណ្តាញផ្ញើសាររំលឹក",
+    "channels": {
+      "telegram": "Telegram",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
+    "privacyHideDetails": "លាក់ឈ្មោះអ្នកខ្ចី និងចំនួនប្រាក់ក្នុងផ្ទាំងដំណឹង",
+    "templatesTitle": "គំរូសាររំលឹក",
+    "templatesLangEn": "គំរូជាភាសាអង់គ្លេស",
+    "templatesLangKm": "គំរូជាភាសាខ្មែរ",
+    "templateVariablesHint": "ចុចលើអថេរដើម្បីបញ្ចូល៖",
+    "templateTypes": {
+      "upcoming": "សាររំលឹកមុនថ្ងៃសង",
+      "due_today": "ដល់ថ្ងៃសងថ្ងៃនេះ",
+      "overdue": "សាររំលឹកបង់យឺត",
+      "final_notice": "ការជូនដំណឹងចុងក្រោយ (យឺត ៣០+ ថ្ងៃ)"
+    },
+    "resetTemplates": "ស្ដារគំរូដើមវិញ",
+    "savedToast": "បានរក្សាទុកការកំណត់ការជូនដំណឹង"
+  },
+  "borrowerLang": {
+    "label": "ភាសាសាររំលឹក",
+    "useDefault": "តាមលំនាំដើមកម្មវិធី",
+    "en": "អង់គ្លេស (EN)",
+    "km": "ភាសាខ្មែរ (KM)"
+  },
+  "promiseToPay": {
+    "label": "ថ្ងៃសន្យាបង់ប្រាក់",
+    "clear": "សម្អាត",
+    "hint": "នឹងជូនដំណឹងប្រសិនបើផុតថ្ងៃនេះដោយមិនទាន់មានការបង់ប្រាក់។"
+  }
+}

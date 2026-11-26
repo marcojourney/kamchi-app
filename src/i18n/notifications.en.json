@@ -1,0 +1,214 @@
+{
+  "bell": {
+    "openCenter": "Open notifications",
+    "unreadCount": "{{count}} unread notifications",
+    "newAlertsAnnounce": "{{count}} new notification(s) arrived"
+  },
+  "center": {
+    "title": "Notifications",
+    "subtitle": "Offline repayment & portfolio alerts",
+    "markAllRead": "Mark all as read",
+    "privacyToggle": "Hide details",
+    "privacyActiveHint": "Names and amounts are hidden in banners.",
+    "close": "Close",
+    "emptyTitle": "All caught up",
+    "emptyBody": "No alerts match this filter right now.",
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "overdue": "Overdue",
+      "due_soon": "Due soon"
+    },
+    "groups": {
+      "today": "Today",
+      "this_week": "This week",
+      "earlier": "Earlier"
+    },
+    "cluster": {
+      "dueToday": "{{count}} payments due today",
+      "dueTomorrow": "{{count}} payments due tomorrow",
+      "dueInDays": "{{count}} payments due soon",
+      "overdue_1": "{{count}} payments 1+ days overdue",
+      "overdue_3": "{{count}} payments 3+ days overdue",
+      "overdue_7": "{{count}} payments 7+ days overdue",
+      "overdue_30plus": "{{count}} payments 30+ days overdue",
+      "expand": "Show items",
+      "collapse": "Hide items"
+    },
+    "priorityLabels": {
+      "high": "Overdue / Urgent",
+      "medium": "Due soon / Attention",
+      "low": "Good news / Tip",
+      "info": "Info"
+    },
+    "snoozedTag": "Snoozed",
+    "readTag": "Read"
+  },
+  "actions": {
+    "recordPayment": "Record payment",
+    "sendReminder": "Send reminder",
+    "callBorrower": "Call",
+    "snooze": "Snooze",
+    "snooze1d": "Snooze 1 day",
+    "snooze3d": "Snooze 3 days",
+    "snoozeUntilDue": "Until due date",
+    "markRead": "Mark as read",
+    "dismiss": "Dismiss",
+    "undo": "Undo",
+    "openTerms": "Review terms",
+    "reloadApp": "Update now",
+    "openSettings": "Update rate"
+  },
+  "dashboard": {
+    "actionNeededTitle": "Action needed today",
+    "actionNeededSummary": "{{overdueCount}} overdue · {{dueCount}} due today",
+    "actionNeededHidden": "Some repayments need your attention today",
+    "viewAll": "View all",
+    "dailySummaryTitle": "Today's overview",
+    "expectedToday": "Expected today",
+    "collectedToday": "Collected so far",
+    "overdueTotal": "Total overdue",
+    "hiddenValue": "Hidden",
+    "dismissSummary": "Dismiss"
+  },
+  "undoToast": {
+    "title": "Payment recorded",
+    "body": "{{borrowerName}} · {{amountFormatted}}",
+    "bodyHidden": "A repayment was saved locally",
+    "undo": "Undo",
+    "undone": "Payment undone"
+  },
+  "privacy": {
+    "hiddenBorrower": "Borrower",
+    "hiddenAmount": "•••"
+  },
+  "items": {
+    "due_soon": {
+      "titleToday": "{{borrowerName}} — Due today",
+      "titleUpcoming": "{{borrowerName}} — Upcoming payment",
+      "bodyToday": "Installment #{{installmentNumber}} ({{amountFormatted}}) is due today ({{dueDate}}).",
+      "bodyTomorrow": "Installment #{{installmentNumber}} ({{amountFormatted}}) is due tomorrow ({{dueDate}}).",
+      "bodyInDays": "Installment #{{installmentNumber}} ({{amountFormatted}}) is due in {{daysUntil}} days ({{dueDate}})."
+    },
+    "overdue": {
+      "title_1": "{{borrowerName}} — Overdue ({{daysLate}}d)",
+      "title_3": "{{borrowerName}} — 3+ days overdue",
+      "title_7": "{{borrowerName}} — 7+ days overdue",
+      "title_30plus": "{{borrowerName}} — 30+ days overdue",
+      "body": "Installment #{{installmentNumber}} ({{amountFormatted}}) was due on {{dueDate}} ({{daysLate}} days late)."
+    },
+    "missed_installments": {
+      "title": "{{borrowerName}} — {{count}} missed installments",
+      "body": "{{count}} unpaid installments are past due. Total balance remaining: {{amountFormatted}}."
+    },
+    "promise_broken": {
+      "title": "{{borrowerName}} — Promise date passed",
+      "body": "Promised payment date ({{promiseDate}}) passed {{daysLate}} day(s) ago without a payment. Balance: {{amountFormatted}}."
+    },
+    "partial_payment": {
+      "title": "{{borrowerName}} — Partial payment",
+      "body": "Installment #{{installmentNumber}} has {{paidFormatted}} paid, with {{remainingFormatted}} remaining (due {{dueDate}})."
+    },
+    "payment_recorded": {
+      "title": "Payment recorded — {{borrowerName}}",
+      "body": "Received {{amountFormatted}} on {{paymentDate}}."
+    },
+    "loan_fully_paid": {
+      "title": "Loan fully paid — {{borrowerName}}",
+      "body": "Total {{amountFormatted}} is settled cleanly.",
+      "bodyWithCollateral": "Total {{amountFormatted}} is settled. Remember to release collateral: {{collateralText}}."
+    },
+    "loan_maturing": {
+      "title": "Loan maturing soon — {{borrowerName}}",
+      "body": "Final installment ({{amountFormatted}}) matures in {{days}} day(s) on {{dueDate}}."
+    },
+    "interest_only_ending": {
+      "title": "Interest-only period ending — {{borrowerName}}",
+      "body": "Final principal balance ({{amountFormatted}}) is due in {{days}} day(s) on {{dueDate}}."
+    },
+    "penalty_started": {
+      "title": "Late fee started — {{borrowerName}}",
+      "body": "Grace period ({{graceDays}}d) ended for installment due {{dueDate}}. Current amount due: {{amountFormatted}}."
+    },
+    "daily_summary": {
+      "title": "Daily summary ({{dateIso}})",
+      "body": "Expected today: {{expectedTodayFormatted}} · Collected: {{collectedTodayFormatted}} · Overdue: {{overdueTotalFormatted}}."
+    },
+    "weekly_summary": {
+      "title": "Weekly portfolio summary ({{weekKey}})",
+      "body": "Collected: {{collectedFormatted}} · New loans: {{newLoansCount}} · Interest earned: {{interestFormatted}} · At risk: {{parFormatted}}."
+    },
+    "terms_updated": {
+      "title": "Terms updated (v{{version}})",
+      "body": "New KamChi Terms and Privacy terms are available to review."
+    },
+    "app_update_available": {
+      "title": "App update ready",
+      "body": "A newer offline version of KamChi is ready. Reload to update safely."
+    },
+    "repeated_late": {
+      "title": "Suggestion: Repeated late payments",
+      "body": "{{borrowerName}} paid the last {{streak}} installments late. Consider tighter reminders or smaller terms next time."
+    },
+    "holiday_tomorrow": {
+      "title": "Khmer holiday tomorrow: {{holidayName}}",
+      "body": "{{dueCount}} installment(s) fall on {{dateIso}}. Borrowers may request adjusting the collection date."
+    },
+    "exchange_rate_stale": {
+      "title": "Suggestion: Review USD/KHR rate",
+      "body": "Your exchange rate (1 USD = {{rate}} ៛) hasn't been updated in {{daysSinceUpdate}} days."
+    }
+  },
+  "settings": {
+    "sectionTitle": "Notifications & Reminders",
+    "sectionDesc": "Configure offline alerts, quiet hours, and polite reminder templates.",
+    "categoriesLabel": "Notification categories",
+    "categories": {
+      "repayment": "Repayments (due soon, overdue, promises)",
+      "lifecycle": "Loan lifecycle (paid off, maturing, penalties)",
+      "summary": "Daily & weekly money summaries",
+      "app": "App & terms updates",
+      "suggestions": "Smart suggestions (holidays, rate, habits)"
+    },
+    "leadDaysLabel": "Remind before due date",
+    "leadDaysOption": "{{days}} day(s) before",
+    "quietHoursLabel": "Quiet hours",
+    "quietHoursDesc": "Mute popup banners and reminders during rest hours.",
+    "quietStart": "From",
+    "quietEnd": "To",
+    "dailySummaryTime": "Daily summary time",
+    "firstOverdueOffset": "First overdue day offset (grace days)",
+    "firstOverdueOffsetHint": "Waits this many days after the due date before flagging overdue (combines with each loan's grace period).",
+    "defaultReminderLang": "Default reminder language",
+    "defaultChannel": "Default reminder channel",
+    "channels": {
+      "telegram": "Telegram",
+      "sms": "SMS",
+      "whatsapp": "WhatsApp"
+    },
+    "privacyHideDetails": "Hide borrower names & amounts in banners",
+    "templatesTitle": "Reminder Message Templates",
+    "templatesLangEn": "English templates",
+    "templatesLangKm": "Khmer templates",
+    "templateVariablesHint": "Tap a variable to insert:",
+    "templateTypes": {
+      "upcoming": "Upcoming reminder",
+      "due_today": "Due today",
+      "overdue": "Overdue reminder",
+      "final_notice": "Final notice (30+ days)"
+    },
+    "resetTemplates": "Reset default templates",
+    "savedToast": "Notification settings saved"
+  },
+  "borrowerLang": {
+    "label": "Reminder language",
+    "useDefault": "App default",
+    "en": "English",
+    "km": "Khmer (ខ្មែរ)"
+  },
+  "promiseToPay": {
+    "label": "Promise to pay date",
+    "clear": "Clear",
+    "hint": "Alerts if payment isn't received after this date."
+  }
+}

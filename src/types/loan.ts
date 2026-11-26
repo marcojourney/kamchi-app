@@ -17,6 +17,7 @@ export interface UserProfile {
   preferredLang: AppLanguage;
   defaultCurrency: CurrencyCode;
   exchangeRateKhr: number;
+  exchangeRateUpdatedAt?: string;
   capitalCashUsd?: number;
   capitalCashKhr?: number;
   useKhmerNumerals?: boolean;
@@ -39,6 +40,7 @@ export interface Borrower {
   guarantorPhone?: string;
   guarantorPhotoDataUrl?: string;
   notes?: string;
+  preferredLang?: AppLanguage;
   tags?: string[];
   riskScore?: number;
   createdAt?: unknown;
@@ -74,6 +76,7 @@ export interface Loan {
   outstandingBalance: number;
   parentLoanId?: string;
   portalShareId?: string;
+  promiseToPayDate?: string; // YYYY-MM-DD
   createdAt?: unknown;
   updatedAt?: unknown;
 }

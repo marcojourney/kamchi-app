@@ -5,11 +5,16 @@ import './index.css';
 import App from './App.tsx';
 import { TERMS_VERSION } from './config/terms';
 import { preloadLicenseState } from './lib/licenseStorage';
+import { reportSwUpdateAvailable } from './lib/swUpdateBridge';
 import { preloadTermsAcceptance } from './lib/termsAcceptance';
 
-registerSW({ immediate: true });
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    reportSwUpdateAvailable(updateSW);
+  },
+});
 
 Promise.all([preloadTermsAcceptance(TERMS_VERSION), preloadLicenseState()]).finally(() => {
   createRoot(document.getElementById('root')!).render(<App />);
 });
-

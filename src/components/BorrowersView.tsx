@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { canCreateBorrower } from '../lib/entitlements';
 import { compressImageToDataUrl, formatCurrency, formatDateLocalized } from '../lib/finance';
-import type { Borrower } from '../types/loan';
+import type { AppLanguage, Borrower } from '../types/loan';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { useLicenseContext } from './LicenseGate';
 
@@ -22,6 +22,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
   onOpenLoanDetail,
 }) => {
   const { t, i18n } = useTranslation();
+  const { t: tNotif } = useTranslation('notifications');
   const {
     borrowers,
     loans,
@@ -54,6 +55,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
   const [guarantorPhone, setGuarantorPhone] = useState('');
   const [guarantorPhotoDataUrl, setGuarantorPhotoDataUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [preferredLang, setPreferredLang] = useState<AppLanguage | ''>('');
   const [tagsText, setTagsText] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -76,6 +78,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
     setGuarantorPhone('');
     setGuarantorPhotoDataUrl('');
     setNotes('');
+    setPreferredLang('');
     setTagsText('');
     setShowForm(true);
   };
@@ -92,6 +95,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
     setGuarantorPhone(b.guarantorPhone || '');
     setGuarantorPhotoDataUrl(b.guarantorPhotoDataUrl || '');
     setNotes(b.notes || '');
+    setPreferredLang(b.preferredLang || '');
     setTagsText((b.tags || []).join(', '));
     setShowForm(true);
   };
@@ -136,6 +140,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
           guarantorPhone,
           guarantorPhotoDataUrl,
           notes,
+          preferredLang: preferredLang || undefined,
           tags,
         });
       } else {
@@ -150,6 +155,7 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
           guarantorPhone,
           guarantorPhotoDataUrl,
           notes,
+          preferredLang: preferredLang || undefined,
           tags,
         });
       }
@@ -744,6 +750,22 @@ export const BorrowersView: React.FC<BorrowersViewProps> = ({
                   placeholder="VIP, Market Vendor, Weekly"
                   className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm text-slate-900 dark:text-slate-100"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  {tNotif('borrowerLang.label')}
+                </label>
+                <select
+                  value={preferredLang}
+                  onChange={(e) =>
+                    setPreferredLang(e.target.value as AppLanguage | '')
+                  }
+                  className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm text-slate-900 dark:text-slate-100"
+                >
+                  <option value="">{tNotif('borrowerLang.useDefault')}</option>
+                  <option value="km">{tNotif('borrowerLang.km')}</option>
+                  <option value="en">{tNotif('borrowerLang.en')}</option>
+                </select>
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
