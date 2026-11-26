@@ -27,13 +27,15 @@ interface TermsScreenProps {
   versionChanged: boolean;
   storageUnavailable: boolean;
   accepting: boolean;
-  onAccept: (language: AppLanguage) => Promise<void>;
+  initialAnalyticsConsent?: boolean;
+  onAccept: (language: AppLanguage, analyticsConsent: boolean) => Promise<void>;
 }
 
 export const TermsScreen: React.FC<TermsScreenProps> = ({
   versionChanged,
   storageUnavailable,
   accepting,
+  initialAnalyticsConsent = false,
   onAccept,
 }) => {
   const { t, i18n } = useTranslation('terms');
@@ -44,6 +46,9 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({
   const [scrollPercent, setScrollPercent] = useState(0);
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [checked, setChecked] = useState(false);
+  const [analyticsConsent, setAnalyticsConsent] = useState(
+    Boolean(initialAnalyticsConsent)
+  );
   const [readerDoc, setReaderDoc] = useState<LegalDocumentType | null>(null);
   const [showDeclineDialog, setShowDeclineDialog] = useState(false);
   const [isClosedScreen, setIsClosedScreen] = useState(false);
@@ -297,7 +302,7 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({
             tabIndex={0}
             role="region"
             aria-label={t('reader.termsTitle', { lng: language })}
-            className="h-[38dvh] min-h-[220px] max-h-[420px] overflow-y-auto px-4 sm:px-5 py-4 space-y-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0F5132]"
+            className="h-[36dvh] min-h-[210px] max-h-[400px] overflow-y-auto px-4 sm:px-5 py-4 space-y-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#0F5132]"
           >
             {sections.map((section) => (
               <section key={section.id} className="space-y-1.5">
@@ -399,6 +404,46 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({
             </p>
           )}
         </div>
+
+        {/* Separate Optional Anonymous Analytics Toggle (off by default) */}
+        <div className="rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <label
+              htmlFor="terms-analytics-toggle"
+              className="flex-1 min-w-0 cursor-pointer space-y-0.5"
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 block">
+                {t('consent.analyticsOptionalTag', { lng: language })}
+              </span>
+              <span
+                className={`text-xs sm:text-sm text-[#1F2937] dark:text-slate-200 block ${
+                  isKm ? 'leading-[1.8]' : 'leading-snug'
+                }`}
+              >
+                {t('consent.analyticsToggleLabel', { lng: language })}
+              </span>
+            </label>
+
+            <button
+              id="terms-analytics-toggle"
+              type="button"
+              role="switch"
+              aria-checked={analyticsConsent}
+              onClick={() => setAnalyticsConsent((prev) => !prev)}
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0F5132] ${
+                analyticsConsent
+                  ? 'bg-[#0F5132]'
+                  : 'bg-slate-300 dark:bg-slate-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-xs transition-transform ${
+                  analyticsConsent ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </main>
 
       {/* Sticky Safe-Area Bottom Action Bar */}
@@ -407,7 +452,7 @@ export const TermsScreen: React.FC<TermsScreenProps> = ({
           <button
             type="button"
             disabled={!checked || accepting}
-            onClick={() => onAccept(language)}
+            onClick={() => onAccept(language, analyticsConsent)}
             className="w-full sm:flex-1 min-h-[48px] rounded-xl bg-[#0F5132] hover:bg-[#0B3E26] text-white px-6 py-3 text-sm font-semibold disabled:opacity-45 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2B544]"
           >
             {t('consent.acceptButton', { lng: language })}

@@ -41,6 +41,7 @@ import {
 } from '../lib/notificationStore';
 import { createDefaultNotificationSettings } from '../lib/notificationTemplates';
 import { subscribeSwUpdate } from '../lib/swUpdateBridge';
+import { track } from '../lib/analytics';
 import type { Payment } from '../types/loan';
 import type {
   NotificationFilter,
@@ -720,6 +721,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const openCenter = useCallback((initialFilter?: NotificationFilter) => {
     if (initialFilter) setActiveFilter(initialFilter);
     setIsCenterOpen(true);
+    track('feature_used', { feature: 'notification_center' });
   }, []);
 
   const closeCenter = useCallback(() => {

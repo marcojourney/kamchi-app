@@ -6,6 +6,7 @@ export interface TermsAcceptanceRecord {
   termsVersion: string;
   acceptedAt: string;
   language: AppLanguage;
+  analyticsConsent: boolean;
 }
 
 export interface TermsSnapshot {
@@ -32,7 +33,7 @@ function isValidIsoTimestamp(value: unknown): value is string {
 
 /**
  * Validates and normalizes an unknown stored value into a TermsAcceptanceRecord.
- * Returns null for missing, malformed, or corrupted data.
+ * Legacy records without `analyticsConsent` safely default to `analyticsConsent: false`.
  */
 export function parseStoredTermsRecord(raw: unknown): TermsAcceptanceRecord | null {
   let candidate: unknown = raw;
@@ -61,6 +62,7 @@ export function parseStoredTermsRecord(raw: unknown): TermsAcceptanceRecord | nu
     termsVersion: obj.termsVersion.trim(),
     acceptedAt: obj.acceptedAt,
     language: obj.language,
+    analyticsConsent: obj.analyticsConsent === true,
   };
 }
 
@@ -84,6 +86,19 @@ export function hasVersionChanged(storedRecord: unknown, currentVersion: string)
   const parsed = parseStoredTermsRecord(storedRecord);
   if (!parsed) return false;
   return parsed.termsVersion !== currentVersion.trim();
+}
+
+/**
+ * Pure helper to update analytics consent on a stored record without altering Terms acceptance metadata.
+ */
+export function withUpdatedAnalyticsConsent(
+  record: TermsAcceptanceRecord,
+  analyticsConsent: boolean
+): TermsAcceptanceRecord {
+  return {
+    ...record,
+    analyticsConsent: Boolean(analyticsConsent),
+  };
 }
 
 async function openLegalDb(): Promise<{ db: IDBDatabase | null; unavailable: boolean }> {
@@ -183,7 +198,6 @@ export async function readTermsAcceptance(
     }
   }
 
-  // If a legacy localStorage record exists while IndexedDB is available, promote it to IndexedDB
   if (parsed && db && !idbUnavailable) {
     void writeRecordToIdb(parsed);
   }
@@ -223,13 +237,15 @@ async function writeRecordToIdb(record: TermsAcceptanceRecord): Promise<boolean>
 
 export async function saveTermsAcceptance(
   language: AppLanguage,
-  currentVersion: string = TERMS_VERSION
+  currentVersion: string = TERMS_VERSION,
+  analyticsConsent = false
 ): Promise<{ record: TermsAcceptanceRecord; persisted: boolean }> {
   const record: TermsAcceptanceRecord = {
     accepted: true,
     termsVersion: currentVersion,
     acceptedAt: new Date().toISOString(),
     language,
+    analyticsConsent: Boolean(analyticsConsent),
   };
 
   const idbSaved = await writeRecordToIdb(record);
@@ -259,9 +275,53 @@ export async function saveTermsAcceptance(
   };
 }
 
+export async function updateStoredAnalyticsConsent(
+  analyticsConsent: boolean,
+  currentVersion: string = TERMS_VERSION
+): Promise<TermsSnapshot> {
+  const existingSnapshot =
+    preloadedSnapshot && preloadedSnapshot.storedRecord
+      ? preloadedSnapshot
+      : await readTermsAcceptance(currentVersion);
+
+  const baseRecord: TermsAcceptanceRecord = existingSnapshot.storedRecord ?? {
+    accepted: true,
+    termsVersion: currentVersion,
+    acceptedAt: new Date().toISOString(),
+    language: 'en',
+    analyticsConsent: false,
+  };
+
+  const updatedRecord = withUpdatedAnalyticsConsent(baseRecord, analyticsConsent);
+  const idbSaved = await writeRecordToIdb(updatedRecord);
+  let lsSaved = false;
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(
+        LEGAL_LS_FALLBACK_KEY,
+        JSON.stringify(updatedRecord)
+      );
+      lsSaved = true;
+    } catch {
+      lsSaved = false;
+    }
+  }
+
+  const snapshot: TermsSnapshot = {
+    loaded: true,
+    storedRecord: updatedRecord,
+    accepted: isAccepted(updatedRecord, currentVersion),
+    versionChanged: hasVersionChanged(updatedRecord, currentVersion),
+    storageUnavailable: !idbSaved && !lsSaved,
+  };
+  preloadedSnapshot = snapshot;
+  return snapshot;
+}
+
 /**
- * Called before React's first render in src/main.tsx so acceptance status
- * is known synchronously on frame 1 with zero flash of the main app.
+ * Called before React's first render in src/main.tsx so acceptance & analytics
+ * consent status are known synchronously on frame 1 with zero flash.
  */
 export async function preloadTermsAcceptance(
   currentVersion: string = TERMS_VERSION

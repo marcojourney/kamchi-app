@@ -8,6 +8,8 @@ import licenseEn from './license.en.json';
 import licenseKm from './license.km.json';
 import notificationsEn from './notifications.en.json';
 import notificationsKm from './notifications.km.json';
+import analyticsEn from './analytics.en.json';
+import analyticsKm from './analytics.km.json';
 
 const browserLang =
   typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('km') ? 'km' : 'en';
@@ -19,17 +21,19 @@ i18n.use(initReactI18next).init({
       terms: termsEn,
       license: licenseEn,
       notifications: notificationsEn,
+      analytics: analyticsEn,
     },
     km: {
       translation: km,
       terms: termsKm,
       license: licenseKm,
       notifications: notificationsKm,
+      analytics: analyticsKm,
     },
   },
   lng: browserLang,
   fallbackLng: 'en',
-  ns: ['translation', 'terms', 'license', 'notifications'],
+  ns: ['translation', 'terms', 'license', 'notifications', 'analytics'],
   defaultNS: 'translation',
   interpolation: {
     escapeValue: false,

@@ -47,6 +47,7 @@ import {
 } from '../lib/localStore';
 import { buildDemoWorkspaceBundle, DEMO_CASH_KHR, DEMO_CASH_USD } from '../lib/demoData';
 import { emitPaymentRecorded, emitPaymentUndone } from '../lib/notificationEvents';
+import { track, trackFunnelOnce } from '../lib/analytics';
 import type {
   AppLanguage,
   AuditLog,
@@ -200,6 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    track('feature_used', { feature: 'theme_switch' });
   }, []);
 
   useEffect(() => {
@@ -819,6 +821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           borrowers: [...prev.borrowers, newBorrower],
         }));
         await writeAuditLog('create_borrower', 'borrower', id, `Added borrower ${newBorrower.name}`);
+        void trackFunnelOnce('first_borrower_added');
         return id;
       }
 
@@ -848,6 +851,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await setDoc(doc(db, 'borrowers', id), payload);
         void touchLatestSeenTime();
         await writeAuditLog('create_borrower', 'borrower', id, `Added borrower ${input.name.trim()}`);
+        void trackFunnelOnce('first_borrower_added');
         return id;
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, path);
@@ -1071,6 +1075,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loanId,
           `Issued ${input.currency} ${input.principal} loan to ${borrower.name}`
         );
+        void trackFunnelOnce('first_loan_created');
         return loanId;
       }
 
@@ -1147,6 +1152,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loanId,
           `Issued ${input.currency} ${input.principal} loan to ${borrower.name}`
         );
+        void trackFunnelOnce('first_loan_created');
         return loanId;
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `loans/${loanId}`);
@@ -1284,6 +1290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           `Recorded ${loan.currency} ${input.amount} payment from ${loan.borrowerName}`
         );
         emitPaymentRecorded(localPayment);
+        void trackFunnelOnce('first_payment_recorded');
         return localPayment;
       }
 
@@ -1368,6 +1375,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           gpsLng: input.gpsLng,
         };
         emitPaymentRecorded(cloudPayment);
+        void trackFunnelOnce('first_payment_recorded');
         return cloudPayment;
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, `payments/${paymentId}`);

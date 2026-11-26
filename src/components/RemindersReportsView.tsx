@@ -20,6 +20,7 @@ import {
 import type { AgingBucketKey } from '../lib/finance';
 import { exportLoansAndPaymentsToExcel, exportPnlReportPdf } from '../lib/pdfExport';
 import type { Loan } from '../types/loan';
+import { track } from '../lib/analytics';
 import { ArrearsView } from './ArrearsView';
 import { useLicenseContext } from './LicenseGate';
 
@@ -148,7 +149,11 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
       const json = (await res.json()) as { sent?: boolean; reason?: string; error?: string };
       if (json.sent) {
         setStatusNotice('Sent via Telegram Bot.');
+        track('reminder_sent', { channel: 'telegram' });
+        track('feature_used', { feature: 'reminder' });
       } else if (json.reason === 'TELEGRAM_BOT_TOKEN_NOT_SET') {
+        track('reminder_sent', { channel: 'telegram' });
+        track('feature_used', { feature: 'reminder' });
         window.open(`https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(text)}`, '_blank');
       } else {
         setStatusNotice(json.error || 'Telegram send failed');
@@ -319,6 +324,10 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                           href={`https://t.me/share/url?url=${encodeURIComponent(' ')}&text=${encodeURIComponent(msg)}`}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={() => {
+                            track('reminder_sent', { channel: 'telegram' });
+                            track('feature_used', { feature: 'reminder' });
+                          }}
                           className="min-h-[36px] flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
                         >
                           <Send className="w-3.5 h-3.5 text-sky-600" />
@@ -341,6 +350,10 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                         href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={() => {
+                          track('reminder_sent', { channel: 'whatsapp' });
+                          track('feature_used', { feature: 'reminder' });
+                        }}
                         className="min-h-[36px] flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
                       >
                         <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
@@ -349,6 +362,10 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
 
                       <a
                         href={`sms:${cleanPhone}?body=${encodeURIComponent(msg)}`}
+                        onClick={() => {
+                          track('reminder_sent', { channel: 'sms' });
+                          track('feature_used', { feature: 'reminder' });
+                        }}
                         className="min-h-[36px] flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
                       >
                         <span>{t('reports.openSms')}</span>
@@ -401,6 +418,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                   lang,
                   useKhmerNumerals: useKh,
                 });
+                track('feature_used', { feature: 'report_export' });
               }}
               className="min-h-[44px] flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700"
             >
@@ -415,6 +433,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                   return;
                 }
                 exportLoansAndPaymentsToExcel({ loans, payments, borrowers });
+                track('feature_used', { feature: 'report_export' });
               }}
               className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100"
             >

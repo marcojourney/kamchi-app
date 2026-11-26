@@ -35,6 +35,7 @@ import {
   normalizeCambodiaPhoneForDial,
 } from '../lib/notificationTemplates';
 import { applySwUpdateAndReload } from '../lib/swUpdateBridge';
+import { track } from '../lib/analytics';
 import type { Loan } from '../types/loan';
 import type {
   NotificationFilter,
@@ -350,7 +351,11 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
                   href={reminderUrl}
                   target={reminderChannel === 'sms' ? undefined : '_blank'}
                   rel="noopener noreferrer"
-                  onClick={() => markRead(item.id)}
+                  onClick={() => {
+                    markRead(item.id);
+                    track('reminder_sent', { channel: reminderChannel });
+                    track('feature_used', { feature: 'reminder' });
+                  }}
                   className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-teal-600" />

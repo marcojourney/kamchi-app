@@ -36,8 +36,10 @@ import { useLicenseContext } from './LicenseGate';
 import { NotificationSettingsSection } from './NotificationSettingsSection';
 import { PWAInstallButton } from './PWAInstallButton';
 import { SettingsLicenseCard } from './SettingsLicenseCard';
+import { SettingsPrivacyCard } from './SettingsPrivacyCard';
 import { SettingsTermsPrivacyView } from './SettingsTermsPrivacyView';
 import { useTermsContext } from './TermsGate';
+import { track } from '../lib/analytics';
 
 export const SettingsView: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -132,6 +134,7 @@ export const SettingsView: React.FC = () => {
     setLang(nextLang);
     i18n.changeLanguage(nextLang);
     document.documentElement.lang = nextLang;
+    track('feature_used', { feature: 'language_switch' });
     await updateSettings({ preferredLang: nextLang });
   };
 
@@ -766,6 +769,9 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Privacy & Feedback */}
+      <SettingsPrivacyCard />
 
       {/* Terms and Privacy */}
       <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

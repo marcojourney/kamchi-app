@@ -1,0 +1,77 @@
+{
+  "privacy": {
+    "sectionTitle": "Privacy & Anonymous Analytics",
+    "sectionDesc": "All loan records stay on your device. Optionally share anonymous aggregate counts so we know which features to improve.",
+    "toggleLabel": "Help improve KamChi by sharing anonymous usage statistics",
+    "toggleSubLabel": "Counts and bucketed ranges only. No borrower or loan details are ever shared.",
+    "statusOn": "Sharing anonymous statistics",
+    "statusOff": "Off — nothing is sent to Google Analytics",
+    "viewSharedButton": "View what is shared",
+    "buildDisabledHint": "Analytics are inactive in development/test builds unless enabled with a Measurement ID."
+  },
+  "sharedModal": {
+    "title": "What would be shared",
+    "subtitle": "Live preview of the exact anonymous daily summary computed from your local ledger.",
+    "close": "Close",
+    "lastSentLabel": "Last sent",
+    "neverSent": "Not sent yet",
+    "toggleLabel": "Share anonymous usage statistics",
+    "snapshotHeading": "Current snapshot values",
+    "metrics": {
+      "totalLoans": "Total loans",
+      "activeLoans": "Active loans",
+      "paidLoans": "Paid loans",
+      "overdueLoans": "Overdue loans",
+      "borrowerCount": "Borrowers",
+      "loansTier": "Portfolio size tier",
+      "overdueRate": "Overdue rate",
+      "avgLoanSize": "Typical loan size",
+      "avgTerm": "Typical loan term",
+      "currencyMix": "Currencies used",
+      "interestType": "Main interest style",
+      "frequency": "Main repayment schedule",
+      "planTier": "Plan tier",
+      "appLanguage": "App language"
+    },
+    "values": {
+      "overdueZero": "0%",
+      "overduePct": "{{bucket}}%",
+      "usd": "USD only",
+      "khr": "KHR only",
+      "both": "USD & KHR",
+      "flat": "Flat",
+      "reducing": "Reducing balance",
+      "interest_only": "Interest only",
+      "mixed": "Mixed",
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "free": "Free",
+      "pro": "Pro",
+      "business": "Business",
+      "en": "English",
+      "km": "Khmer"
+    },
+    "neverSentHeading": "Never sent",
+    "neverSentItems": [
+      "Borrower names, phone numbers, addresses, national ID info, or photos",
+      "Notes, contracts, collateral descriptions, or any free text",
+      "License keys or your device code",
+      "Exact loan amounts, balances, interest rates, or individual loan/payment dates",
+      "Any custom user ID or ad tracking identifier"
+    ],
+    "perInstallHeading": "What \"per lender\" means",
+    "perInstallBody": "\"Per lender\" means per install. GA4 gives this browser or phone a random anonymous ID (so we can see e.g. \"this install has 12 loans\") without knowing who you are. Clearing site data or reinstalling resets it."
+  },
+  "feedback": {
+    "cardTitle": "Feedback",
+    "cardDesc": "Share suggestions or report what would make KamChi more useful for your lending workflow.",
+    "giveFeedbackButton": "Give feedback",
+    "localRatingSaved": "Saved locally: {{rating}}/5 stars",
+    "promptTitle": "How is KamChi working for you?",
+    "promptBody": "Tap a rating below. Your rating stays on this device only and helps us ask if you'd like to share feedback.",
+    "savedThanks": "Thanks for rating KamChi!",
+    "tellUsMoreButton": "Tell us more (Google Form)",
+    "dismiss": "Not now"
+  }
+}

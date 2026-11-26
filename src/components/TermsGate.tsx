@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTermsAcceptance } from '../hooks/useTermsAcceptance';
+import { trackFunnelOnce, trackScreenView } from '../lib/analytics';
 import type { TermsAcceptanceRecord } from '../lib/termsAcceptance';
 import type { AppLanguage } from '../types/loan';
 import { TermsReader, type LegalDocumentType } from './TermsReader';
@@ -8,9 +9,11 @@ import { TermsScreen } from './TermsScreen';
 
 interface TermsContextValue {
   accepted: boolean;
+  analyticsConsent: boolean;
   storedRecord: TermsAcceptanceRecord | null;
   termsVersion: string;
   storageUnavailable: boolean;
+  setAnalyticsConsent: (enabled: boolean) => Promise<void>;
   openLegalDocument: (docType: LegalDocumentType) => void;
 }
 
@@ -21,16 +24,25 @@ export const TermsGate: React.FC<{ children: React.ReactNode }> = ({ children })
   const {
     loaded,
     accepted,
+    analyticsConsent,
     versionChanged,
     storageUnavailable,
     storedRecord,
     termsVersion,
     accepting,
     acceptTerms,
+    setAnalyticsConsent,
   } = useTermsAcceptance();
 
   const [readerDoc, setReaderDoc] = useState<LegalDocumentType | null>(null);
   const [enteredApp, setEnteredApp] = useState(accepted);
+
+  useEffect(() => {
+    if (loaded && !accepted) {
+      // Only fires if user already consented previously (e.g., version update screen)
+      trackScreenView('terms');
+    }
+  }, [loaded, accepted]);
 
   // Smooth transition once terms are accepted, respecting prefers-reduced-motion
   useEffect(() => {
@@ -86,13 +98,24 @@ export const TermsGate: React.FC<{ children: React.ReactNode }> = ({ children })
 
   const currentLang: AppLanguage = i18n.language.startsWith('km') ? 'km' : 'en';
 
+  const handleAcceptTerms = async (
+    language: AppLanguage,
+    optInAnalytics: boolean
+  ) => {
+    await acceptTerms(language, optInAnalytics);
+    if (optInAnalytics) {
+      void trackFunnelOnce('terms_accepted');
+    }
+  };
+
   if (!accepted) {
     return (
       <TermsScreen
         versionChanged={versionChanged}
         storageUnavailable={storageUnavailable}
         accepting={accepting}
-        onAccept={acceptTerms}
+        initialAnalyticsConsent={analyticsConsent}
+        onAccept={handleAcceptTerms}
       />
     );
   }
@@ -101,9 +124,11 @@ export const TermsGate: React.FC<{ children: React.ReactNode }> = ({ children })
     <TermsContext.Provider
       value={{
         accepted,
+        analyticsConsent,
         storedRecord,
         termsVersion,
         storageUnavailable,
+        setAnalyticsConsent,
         openLegalDocument: setReaderDoc,
       }}
     >

@@ -24,6 +24,8 @@
     "and": "and",
     "privacyLink": "Privacy Policy",
     "scrollRequiredNote": "Scroll to the bottom of the box above to enable this checkbox.",
+    "analyticsOptionalTag": "Optional",
+    "analyticsToggleLabel": "Help improve KamChi by sharing anonymous usage statistics. No borrower or loan details are ever shared.",
     "acceptButton": "Accept and continue",
     "declineButton": "Decline"
   },
@@ -88,8 +90,8 @@
       "id": "local_data",
       "title": "3. Your Data Stays on Your Device",
       "body": [
-        "Your borrower names, phone numbers, national ID photos, loan amounts, repayment schedules, and payment records are stored locally on your device (in IndexedDB browser storage) and are not automatically uploaded to KamChi servers.",
-        "If you optionally choose to sign in with Google for personal cloud backup, your synced data is stored under your own authenticated account."
+        "Your borrower names, phone numbers, national ID photos, loan amounts, repayment schedules, and payment records are stored locally on your device in IndexedDB storage and are never automatically uploaded to KamChi servers.",
+        "If you optionally sign in with Google for personal cloud backup, your synced data is stored under your own authenticated Google account."
       ]
     },
     {
@@ -101,24 +103,35 @@
       ]
     },
     {
-      "id": "collection",
-      "title": "5. What We Collect",
+      "id": "anonymous_analytics",
+      "title": "5. Anonymous Usage Statistics (Optional)",
       "body": [
-        "When you purchase or activate a paid license, KamChi only collects the minimum information needed to verify your license: your license key, plan tier, expiry date, device identifier, and the contact details you voluntarily provide during purchase.",
-        "We do not collect, sell, or inspect your borrowers' loan ledgers."
+        "By default, usage analytics are turned OFF. You can accept these Terms and use the entire app without enabling analytics, or change your choice anytime in Settings > Privacy.",
+        "Allowed: counts and bucketed ranges. Examples: number of loans, number of borrowers, share of loans that are overdue, loan size bucket (\"$100-500\"), and feature usage.",
+        "Still never sent: names, phone numbers, ID info, notes, license keys, device codes, free text, exact money amounts, exact dates of individual loans, or anything about a specific borrower.",
+        "\"Per lender\" means per install. GA4 gives each browser or phone a random anonymous ID. It lets us see \"this lender has 12 loans\" without knowing who they are. It resets if the user clears data or reinstalls, so it measures installs, not people."
+      ]
+    },
+    {
+      "id": "what_we_receive",
+      "title": "6. What We Receive",
+      "body": [
+        "We never see your borrowers' names, IDs, or loan details.",
+        "When you contact our seller to purchase a license key or ask for support, we only receive what you choose to send: your contact handle/number, the device code you copy to us, your chosen plan, and payment confirmation. If you turn on optional usage statistics, we also receive the anonymous aggregate counts and buckets described above."
       ]
     },
     {
       "id": "license",
-      "title": "6. License",
+      "title": "7. Licenses",
       "body": [
-        "A valid license key unlocks paid features and is limited to the stated number of devices for your plan. You must not share, distribute, or resell your license key.",
-        "If your license expires, the app switches to read-only mode so your existing lending records stay accessible and exportable at all times."
+        "Paid license keys are verified offline inside the app without an internet connection.",
+        "Each license key is tied to the device code you choose to send to the seller. Moving to a new phone or clearing site data changes your device code and requires a new license key.",
+        "If your license expires past its grace period, KamChi switches to read-only mode so your existing borrowers, loans, and schedules stay visible and exportable at all times. You must not share or resell your key."
       ]
     },
     {
       "id": "borrower_info",
-      "title": "7. Borrower Information",
+      "title": "8. Borrower Information",
       "body": [
         "You confirm that you have the legal right and borrower consent to record and store borrowers' and guarantors' personal information, national ID numbers, and photos on your device.",
         "You agree to protect this information using device locks or the in-app PIN lock and handle it responsibly."
@@ -126,7 +139,7 @@
     },
     {
       "id": "calculations",
-      "title": "8. Calculations",
+      "title": "9. Calculations",
       "body": [
         "Repayment schedules, interest totals, overdue counts, late fees, and currency conversions are calculated as a convenience tool.",
         "You should always verify amounts and totals yourself before issuing a contract, collecting payment, or taking legal action."
@@ -134,7 +147,7 @@
     },
     {
       "id": "liability",
-      "title": "9. No Warranty and Limits of Liability",
+      "title": "10. No Warranty and Limits of Liability",
       "body": [
         "KamChi is provided on an \"as is\" and \"as available\" basis to the fullest extent permitted by applicable law, without warranties of uninterrupted availability or error-free operation.",
         "To the extent allowed by law, KamChi and its creators are not liable for unpaid loans, borrower disputes, lost local data, or indirect or consequential losses."
@@ -142,7 +155,7 @@
     },
     {
       "id": "changes",
-      "title": "10. Changes to These Terms",
+      "title": "11. Changes to These Terms",
       "body": [
         "We may update these Terms and Conditions or our Privacy Policy from time to time.",
         "When material changes are made, KamChi will show a summary of what changed and ask you to accept the updated version before continuing."
@@ -150,7 +163,7 @@
     },
     {
       "id": "contact",
-      "title": "11. Contact",
+      "title": "12. Contact",
       "body": [
         "If you have questions about these Terms, licensing, or privacy, please contact us (placeholder details prior to launch):",
         "Telegram: {{telegram}} · Email: {{email}}"
@@ -160,28 +173,39 @@
   "privacySections": [
     {
       "id": "privacy_overview",
-      "title": "1. Offline-First Privacy Design",
+      "title": "1. Your Data Stays on Your Device",
       "body": [
         "KamChi is designed so your lending ledger stays on your own device. Borrower profiles, national ID images, contracts, payment history, and collector lists remain inside local IndexedDB storage on your device."
       ]
     },
     {
-      "id": "privacy_license",
-      "title": "2. License & Support Information",
+      "id": "privacy_what_we_receive",
+      "title": "2. What We Receive & Offline Licenses",
       "body": [
-        "If you purchase a license or contact support, we only process your license key, plan status, expiry date, device identifier, and the contact details you share with us."
+        "We never see your borrowers' names, IDs, or loan details.",
+        "License keys are verified offline inside the app without internet access and are tied to the device code you share with the seller (a new phone requires a new key). If you reach out to purchase a key or ask for support, we only receive the contact details, device code, chosen plan, and payment confirmation you send us."
       ]
     },
     {
       "id": "privacy_permissions",
       "title": "3. Camera, Location & Notifications",
       "body": [
-        "Optional permissions such as camera (for ID/collateral photos), GPS check-in (for collection logs), and browser notifications (for due reminders) are only used when you trigger those features and stay under your control."
+        "Optional permissions such as camera (for ID/collateral photos), GPS check-in (for collection logs), and local alerts remain under your control on your device."
+      ]
+    },
+    {
+      "id": "privacy_analytics",
+      "title": "4. Anonymous Usage Statistics (Optional)",
+      "body": [
+        "Usage analytics are OFF by default and only run when you explicitly opt in. Turning analytics off stops all sending immediately and clears Google Analytics cookies.",
+        "Allowed: counts and bucketed ranges. Examples: number of loans, number of borrowers, share of loans that are overdue, loan size bucket (\"$100-500\"), and feature usage.",
+        "Still never sent: names, phone numbers, ID info, notes, license keys, device codes, free text, exact money amounts, exact dates of individual loans, or anything about a specific borrower.",
+        "\"Per lender\" means per install. GA4 gives each browser or phone a random anonymous ID. It lets us see \"this lender has 12 loans\" without knowing who they are. It resets if the user clears data or reinstalls, so it measures installs, not people."
       ]
     },
     {
       "id": "privacy_deletion",
-      "title": "4. Deleting Your Local Data",
+      "title": "5. Deleting Your Local Data",
       "body": [
         "Because KamChi stores records on your device, you can erase all local records at any time by clearing site storage for KamChi in your browser settings or uninstalling the installed PWA.",
         "For support inquiries (placeholder contact): Telegram {{telegram}} · Email {{email}}"

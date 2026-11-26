@@ -1,4 +1,5 @@
 import React from 'react';
+import { track } from '../lib/analytics';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -16,6 +17,10 @@ export class ErrorBoundary extends React.Component<
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, message: error.message || 'Unexpected application error' };
+  }
+
+  override componentDidCatch() {
+    track('app_error', { error_type: 'render_crash' });
   }
 
   override render() {

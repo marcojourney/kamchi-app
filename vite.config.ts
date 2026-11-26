@@ -58,6 +58,11 @@ export default defineConfig(() => {
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [
             {
+              urlPattern:
+                /^https:\/\/(www\.)?(googletagmanager\.com|google-analytics\.com)\/.*/i,
+              handler: 'NetworkOnly',
+            },
+            {
               urlPattern: ({ sameOrigin, request }) =>
                 sameOrigin &&
                 ['script', 'style', 'image', 'font'].includes(request.destination),

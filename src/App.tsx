@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart3,
   FileSpreadsheet,
@@ -30,7 +30,13 @@ import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { RemindersReportsView } from './components/RemindersReportsView';
 import type { ReportsSubTab } from './components/RemindersReportsView';
 import { SettingsView } from './components/SettingsView';
-import { TermsGate } from './components/TermsGate';
+import { TermsGate, useTermsContext } from './components/TermsGate';
+import {
+  maybeSendDailyPortfolioSnapshot,
+  track,
+  trackFunnelOnce,
+  trackScreenView,
+} from './lib/analytics';
 import {
   canCreateBorrower,
   getCreateLoanBlockReason,
@@ -42,10 +48,23 @@ type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'settings';
 
 const MainShell: React.FC = () => {
   const { t, i18n } = useTranslation();
-  const { user, authReady, isPinLocked, profile, loans, updateSettings } = useApp();
+  const {
+    user,
+    authReady,
+    isPinLocked,
+    profile,
+    borrowers,
+    loans,
+    schedulesByLoan,
+    updateSettings,
+  } = useApp();
   const { licenseState, openUpgradePrompt } = useLicenseContext();
+  const { analyticsConsent } = useTermsContext();
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const openedOfflineRef = useRef<boolean>(
+    typeof navigator !== 'undefined' && navigator.onLine === false
+  );
   const [reportsSubTabRequest, setReportsSubTabRequest] = useState<{
     tab: ReportsSubTab;
     bucket?: AgingBucketKey | null;
@@ -61,6 +80,47 @@ const MainShell: React.FC = () => {
     payment: Payment;
     remainingAfter: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!authReady || !analyticsConsent) return;
+    const onlineState = openedOfflineRef.current ? 'offline_then_online' : 'online';
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+      void trackFunnelOnce('app_open', { online_state: onlineState });
+    }
+    const handleOnline = () => {
+      void trackFunnelOnce('app_open', {
+        online_state: openedOfflineRef.current ? 'offline_then_online' : 'online',
+      });
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [authReady, analyticsConsent]);
+
+  useEffect(() => {
+    if (!authReady || !analyticsConsent) return;
+    trackScreenView(activeTab);
+  }, [activeTab, authReady, analyticsConsent]);
+
+  useEffect(() => {
+    if (!authReady || !analyticsConsent) return;
+    void maybeSendDailyPortfolioSnapshot({
+      loans,
+      borrowers,
+      schedulesByLoan,
+      exchangeRateKhr: profile?.exchangeRateKhr || 4100,
+      planTier: licenseState.plan,
+      appLanguage: i18n.language === 'km' ? 'km' : 'en',
+    });
+  }, [
+    authReady,
+    analyticsConsent,
+    loans,
+    borrowers,
+    schedulesByLoan,
+    profile?.exchangeRateKhr,
+    licenseState.plan,
+    i18n.language,
+  ]);
 
   const activeLoansCount = useMemo(
     () => loans.filter((l) => l.status === 'active').length,
@@ -89,6 +149,7 @@ const MainShell: React.FC = () => {
     const next = i18n.language === 'km' ? 'en' : 'km';
     i18n.changeLanguage(next);
     document.documentElement.lang = next;
+    track('feature_used', { feature: 'language_switch' });
     if (profile) {
       await updateSettings({ preferredLang: next });
     }

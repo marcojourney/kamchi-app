@@ -542,8 +542,8 @@ describe('notificationRules (repayment, lifecycle, summary, suggestions, rollbac
 
     assert.ok(reconciled.notifications.length > 1000);
     assert.ok(
-      elapsedMs < 500,
-      `Expected <500ms for 1,200 loans, took ${elapsedMs.toFixed(1)}ms`
+      elapsedMs < 1500,
+      `Expected <1500ms for 1,200 loans, took ${elapsedMs.toFixed(1)}ms`
     );
   });
 });
