@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
 import { allocatePaymentAcrossSchedules, formatCurrency } from '../lib/finance';
 import type { Loan, Payment, PaymentMethod } from '../types/loan';
+import { DatePicker } from './DatePicker';
 
 interface RecordPaymentModalProps {
   loan: Loan;
@@ -188,12 +189,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 {t('payment.date')}
               </label>
-              <input
-                type="date"
-                required
+              <DatePicker
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-xs font-mono text-slate-900 dark:text-slate-100"
+                onChange={setPaymentDate}
+                useKhmerNumerals={useKh}
+                ariaLabel={t('payment.date')}
               />
             </div>
             <div>

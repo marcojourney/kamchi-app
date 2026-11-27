@@ -206,7 +206,21 @@
     "sharePortalLink": "Borrower Portal Link",
     "sendReminder": "Send Reminder",
     "calendarTitle": "Due Dates Calendar",
-    "noDueOnDate": "No installments due on this date."
+    "noDueOnDate": "No installments due on this date.",
+    "sectionBorrowerTerms": "Borrower & Loan Terms",
+    "sectionFeesPenalties": "Fees & Late Penalties",
+    "sectionCollateralSignature": "Collateral & Signature",
+    "collateralPlaceholder": "Moto plate, Land title...",
+    "photoReady": "Photo attached",
+    "noBorrowersHint": "Please add a borrower first before creating a loan.",
+    "imageProcessError": "Could not process image",
+    "createError": "Failed to create loan",
+    "selectBorrowerPlaceholder": "Select a borrower...",
+    "searchBorrowerPlaceholder": "Search by name, ID, or phone...",
+    "drawerSelectBorrowerTitle": "Select Borrower",
+    "noMatchingBorrowers": "No borrowers match your search.",
+    "clearSearch": "Clear search",
+    "borrowerCount": "{{count}} borrowers"
   },
   "payment": {
     "title": "Record Repayment",
@@ -303,7 +317,9 @@
     "clearDemoButton": "Clean Demo Data",
     "clearingDemo": "Cleaning...",
     "clearDemoSuccess": "Demo data cleaned successfully.",
-    "clearDemoNothing": "No demo data to clean."
+    "clearDemoNothing": "No demo data to clean.",
+    "versionLabel": "App Version",
+    "aboutAppDesc": "Offline-first personal loan ledger for Cambodia"
   },
   "portal": {
     "title": "Borrower Loan Summary",
@@ -317,5 +333,14 @@
     "downloadPdf": "Download PDF",
     "downloadExcel": "Download Excel (.xlsx)",
     "notFound": "This borrower portal link is invalid or has expired."
+  },
+  "datePicker": {
+    "selectDate": "Select date",
+    "today": "Today",
+    "clear": "Clear",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "month": "Month",
+    "year": "Year"
   }
 }

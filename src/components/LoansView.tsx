@@ -46,7 +46,8 @@ import {
   exportLoanSchedulePdf,
 } from '../lib/pdfExport';
 import type { Loan } from '../types/loan';
-import { CreateLoanModal } from './CreateLoanModal';
+import { CreateLoanView } from './CreateLoanView';
+import { DatePicker } from './DatePicker';
 import { useLicenseContext } from './LicenseGate';
 
 interface LoansViewProps {
@@ -294,6 +295,21 @@ export const LoansView: React.FC<LoansViewProps> = ({
     }
     setActionModal({ mode, loan });
   };
+
+  if (actionModal) {
+    return (
+      <CreateLoanView
+        key={`${actionModal.mode}_${actionModal.loan.id}`}
+        mode={actionModal.mode}
+        sourceLoan={actionModal.loan}
+        onClose={() => setActionModal(null)}
+        onCreated={(newId) => {
+          setActionModal(null);
+          onSelectLoanId(newId);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -799,18 +815,22 @@ export const LoansView: React.FC<LoansViewProps> = ({
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <input
-                    id="loan-promise-to-pay"
-                    type="date"
-                    value={activeLoanDetail.promiseToPayDate || ''}
-                    onChange={(e) =>
-                      void setLoanPromiseToPay(
-                        activeLoanDetail.id,
-                        e.target.value || null
-                      )
-                    }
-                    className="min-h-[40px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-mono"
-                  />
+                  <div className="min-w-[165px]">
+                    <DatePicker
+                      id="loan-promise-to-pay"
+                      value={activeLoanDetail.promiseToPayDate || ''}
+                      onChange={(nextDate) =>
+                        void setLoanPromiseToPay(
+                          activeLoanDetail.id,
+                          nextDate || null
+                        )
+                      }
+                      allowClear
+                      useKhmerNumerals={useKh}
+                      minHeightClass="min-h-[40px]"
+                      ariaLabel={tNotif('promiseToPay.label')}
+                    />
+                  </div>
                   {activeLoanDetail.promiseToPayDate && (
                     <button
                       type="button"
@@ -896,14 +916,6 @@ export const LoansView: React.FC<LoansViewProps> = ({
         </div>
       )}
 
-      {actionModal && (
-        <CreateLoanModal
-          mode={actionModal.mode}
-          sourceLoan={actionModal.loan}
-          onClose={() => setActionModal(null)}
-          onCreated={(newId) => onSelectLoanId(newId)}
-        />
-      )}
     </div>
   );
 };

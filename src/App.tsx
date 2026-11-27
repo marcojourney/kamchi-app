@@ -5,7 +5,9 @@ import {
   Globe,
   Home,
   Settings,
+  UserCog,
   Users,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AppProvider, useApp } from './context/AppContext';
@@ -13,7 +15,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { AppSkeleton } from './components/AppSkeleton';
 import { BorrowerPortalView } from './components/BorrowerPortalView';
 import { BorrowersView } from './components/BorrowersView';
-import { CreateLoanModal } from './components/CreateLoanModal';
+import { CreateLoanView } from './components/CreateLoanView';
 import { DashboardView } from './components/DashboardView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LicenseBanner } from './components/LicenseBanner';
@@ -30,6 +32,7 @@ import { RecordPaymentModal } from './components/RecordPaymentModal';
 import { RemindersReportsView } from './components/RemindersReportsView';
 import type { ReportsSubTab } from './components/RemindersReportsView';
 import { SettingsView } from './components/SettingsView';
+import { StaffView } from './components/StaffView';
 import { TermsGate, useTermsContext } from './components/TermsGate';
 import {
   maybeSendDailyPortfolioSnapshot,
@@ -41,10 +44,11 @@ import {
   canCreateBorrower,
   getCreateLoanBlockReason,
 } from './lib/entitlements';
+import { APP_VERSION } from './config/app';
 import type { AgingBucketKey } from './lib/finance';
 import type { Loan, Payment } from './types/loan';
 
-type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'settings';
+type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'staff' | 'settings';
 
 const MainShell: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -62,6 +66,7 @@ const MainShell: React.FC = () => {
   const { analyticsConsent } = useTermsContext();
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const openedOfflineRef = useRef<boolean>(
     typeof navigator !== 'undefined' && navigator.onLine === false
   );
@@ -98,7 +103,7 @@ const MainShell: React.FC = () => {
 
   useEffect(() => {
     if (!authReady || !analyticsConsent) return;
-    trackScreenView(activeTab);
+    trackScreenView(activeTab === 'staff' ? 'settings' : activeTab);
   }, [activeTab, authReady, analyticsConsent]);
 
   useEffect(() => {
@@ -121,6 +126,17 @@ const MainShell: React.FC = () => {
     licenseState.plan,
     i18n.language,
   ]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileDrawerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mobileDrawerOpen]);
 
   const activeLoansCount = useMemo(
     () => loans.filter((l) => l.status === 'active').length,
@@ -189,7 +205,10 @@ const MainShell: React.FC = () => {
     },
     {
       title: t('nav.groupSystemSecurity'),
-      items: navItems.filter((item) => item.id === 'settings'),
+      items: [
+        { id: 'staff', label: t('settings.staffTitle'), icon: UserCog },
+        ...navItems.filter((item) => item.id === 'settings'),
+      ],
     },
   ];
 
@@ -200,7 +219,9 @@ const MainShell: React.FC = () => {
       ? profile.lenderLogoDataUrl
       : '';
   const profileInitial = profileDisplayName.trim().charAt(0).toUpperCase() || 'K';
-  const activeNavLabel = navItems.find((n) => n.id === activeTab)?.label || '';
+  const activeNavLabel = showCreateLoan.open
+    ? t('loans.createTitle')
+    : navGroups.flatMap((g) => g.items).find((n) => n.id === activeTab)?.label || '';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row">
@@ -237,6 +258,7 @@ const MainShell: React.FC = () => {
                       type="button"
                       aria-current={active ? 'page' : undefined}
                       onClick={() => {
+                        setShowCreateLoan({ open: false });
                         if (item.id === 'reports') setReportsSubTabRequest(null);
                         setActiveTab(item.id);
                       }}
@@ -269,8 +291,116 @@ const MainShell: React.FC = () => {
             </span>
             <span>{i18n.language === 'km' ? 'ខ្មែរ' : 'EN'}</span>
           </button>
+          <div className="px-3 pt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+            <span>{t('settings.versionLabel')}</span>
+            <span className="font-mono tabular-nums">v{APP_VERSION}</span>
+          </div>
         </div>
       </aside>
+
+      {/* Mobile Left Slide-Over Drawer */}
+      <div
+        className={`lg:hidden fixed inset-0 z-50 transition-opacity duration-250 motion-reduce:transition-none ${
+          mobileDrawerOpen
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
+        }`}
+        aria-hidden={!mobileDrawerOpen}
+      >
+        <div
+          onClick={() => setMobileDrawerOpen(false)}
+          className="fixed inset-0 bg-slate-950/50 backdrop-blur-[1px]"
+        />
+        <aside
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('app.name')}
+          className={`relative z-10 h-full w-72 max-w-[82vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] flex flex-col justify-between overflow-y-auto shadow-2xl transform transition-transform duration-250 ease-out motion-reduce:transition-none ${
+            mobileDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <div className="space-y-6">
+            <div className="flex items-center justify-between gap-2 px-1 pt-1">
+              <div>
+                <img
+                  src="/assets/aistudio/image_01667597.png"
+                  alt={t('app.name')}
+                  className="h-12 w-auto object-contain dark:hidden"
+                  referrerPolicy="no-referrer"
+                />
+                <img
+                  src="/assets/aistudio/image_8f57a101.png"
+                  alt={t('app.name')}
+                  className="hidden dark:block h-12 w-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(false)}
+                aria-label={t('app.close')}
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <nav aria-label="Mobile drawer" className="space-y-5">
+              {navGroups.map((group) => (
+                <div key={group.title} className="space-y-1">
+                  <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {group.title}
+                  </p>
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-current={active ? 'page' : undefined}
+                        onClick={() => {
+                          setShowCreateLoan({ open: false });
+                          if (item.id === 'reports') setReportsSubTabRequest(null);
+                          setActiveTab(item.id);
+                          setMobileDrawerOpen(false);
+                        }}
+                        className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
+                          active
+                            ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-semibold'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
+          </div>
+
+          <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-3 mt-6">
+            <PWAInstallButton variant="full" />
+            <button
+              type="button"
+              onClick={toggleQuickLang}
+              className="w-full min-h-[40px] flex items-center justify-between px-3 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <span className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-teal-600" />
+                <span>{t('settings.language')}</span>
+              </span>
+              <span>{i18n.language === 'km' ? 'ខ្មែរ' : 'EN'}</span>
+            </button>
+            <div className="px-3 pt-1 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <span>{t('settings.versionLabel')}</span>
+              <span className="font-mono tabular-nums">v{APP_VERSION}</span>
+            </div>
+          </div>
+        </aside>
+      </div>
 
       {/* Main Content Area */}
       <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
@@ -279,7 +409,13 @@ const MainShell: React.FC = () => {
         {/* Top Header (Mobile & Desktop) */}
         <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="lg:hidden shrink-0">
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen(true)}
+              aria-label={t('app.name')}
+              aria-expanded={mobileDrawerOpen}
+              className="lg:hidden shrink-0 min-h-[44px] flex items-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:scale-[0.98] transition-transform"
+            >
               <img
                 src="/assets/aistudio/image_01667597.png"
                 alt={t('app.name')}
@@ -292,7 +428,7 @@ const MainShell: React.FC = () => {
                 className="hidden dark:block h-11 sm:h-12 w-auto object-contain"
                 referrerPolicy="no-referrer"
               />
-            </div>
+            </button>
             <span className="hidden lg:inline-block text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
               {activeNavLabel}
             </span>
@@ -315,7 +451,10 @@ const MainShell: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => {
+                setShowCreateLoan({ open: false });
+                setActiveTab('settings');
+              }}
               title={profileDisplayName}
               aria-label={profileDisplayName}
               className={`h-10 w-10 rounded-full border overflow-hidden flex items-center justify-center shrink-0 transition-all ${
@@ -351,59 +490,75 @@ const MainShell: React.FC = () => {
             <LicenseBanner />
           </div>
 
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              onNewLoan={() => requestNewLoan()}
-              onAddBorrower={requestAddBorrower}
-              onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
-              onOpenLoanDetail={(loanId) => {
-                setSelectedLoanId(loanId);
-                setActiveTab('loans');
-              }}
-              onOpenArrears={(bucket = null) => {
-                setReportsSubTabRequest({
-                  tab: 'arrears',
-                  bucket,
-                  seq: Date.now(),
-                });
-                setActiveTab('reports');
-              }}
-            />
-          )}
-
-          {activeTab === 'loans' && (
-            <LoansView
-              selectedLoanId={selectedLoanId}
-              onSelectLoanId={setSelectedLoanId}
-              onNewLoan={() => requestNewLoan()}
-              onRecordPayment={(loan) => setPaymentLoan(loan)}
-            />
-          )}
-
-          {activeTab === 'borrowers' && (
-            <BorrowersView
-              externalOpenAdd={openAddBorrower}
-              onCloseExternalAdd={() => setOpenAddBorrower(false)}
-              onNewLoanForBorrower={(borrowerId) => requestNewLoan(borrowerId)}
-              onOpenLoanDetail={(loanId) => {
+          {showCreateLoan.open ? (
+            <CreateLoanView
+              key={`create_${showCreateLoan.borrowerId || 'any'}`}
+              initialBorrowerId={showCreateLoan.borrowerId}
+              onClose={() => setShowCreateLoan({ open: false })}
+              onCreated={(loanId) => {
+                setShowCreateLoan({ open: false });
                 setSelectedLoanId(loanId);
                 setActiveTab('loans');
               }}
             />
-          )}
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
+                <DashboardView
+                  onNewLoan={() => requestNewLoan()}
+                  onAddBorrower={requestAddBorrower}
+                  onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
+                  onOpenLoanDetail={(loanId) => {
+                    setSelectedLoanId(loanId);
+                    setActiveTab('loans');
+                  }}
+                  onOpenArrears={(bucket = null) => {
+                    setReportsSubTabRequest({
+                      tab: 'arrears',
+                      bucket,
+                      seq: Date.now(),
+                    });
+                    setActiveTab('reports');
+                  }}
+                />
+              )}
 
-          {activeTab === 'reports' && (
-            <RemindersReportsView
-              subTabRequest={reportsSubTabRequest}
-              onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
-              onOpenLoanDetail={(loanId) => {
-                setSelectedLoanId(loanId);
-                setActiveTab('loans');
-              }}
-            />
-          )}
+              {activeTab === 'loans' && (
+                <LoansView
+                  selectedLoanId={selectedLoanId}
+                  onSelectLoanId={setSelectedLoanId}
+                  onNewLoan={() => requestNewLoan()}
+                  onRecordPayment={(loan) => setPaymentLoan(loan)}
+                />
+              )}
 
-          {activeTab === 'settings' && <SettingsView />}
+              {activeTab === 'borrowers' && (
+                <BorrowersView
+                  externalOpenAdd={openAddBorrower}
+                  onCloseExternalAdd={() => setOpenAddBorrower(false)}
+                  onNewLoanForBorrower={(borrowerId) => requestNewLoan(borrowerId)}
+                  onOpenLoanDetail={(loanId) => {
+                    setSelectedLoanId(loanId);
+                    setActiveTab('loans');
+                  }}
+                />
+              )}
+
+              {activeTab === 'reports' && (
+                <RemindersReportsView
+                  subTabRequest={reportsSubTabRequest}
+                  onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
+                  onOpenLoanDetail={(loanId) => {
+                    setSelectedLoanId(loanId);
+                    setActiveTab('loans');
+                  }}
+                />
+              )}
+
+              {activeTab === 'staff' && <StaffView />}
+              {activeTab === 'settings' && <SettingsView />}
+            </>
+          )}
         </main>
 
         {/* Mobile Bottom Tab Bar — Floating Frosted Glass Dock */}
@@ -421,6 +576,7 @@ const MainShell: React.FC = () => {
                   type="button"
                   aria-current={active ? 'page' : undefined}
                   onClick={() => {
+                    setShowCreateLoan({ open: false });
                     if (item.id === 'reports') setReportsSubTabRequest(null);
                     setActiveTab(item.id);
                   }}
@@ -459,16 +615,6 @@ const MainShell: React.FC = () => {
       </div>
 
       {/* Shared Modals */}
-      {showCreateLoan.open && (
-        <CreateLoanModal
-          initialBorrowerId={showCreateLoan.borrowerId}
-          onClose={() => setShowCreateLoan({ open: false })}
-          onCreated={(loanId) => {
-            setSelectedLoanId(loanId);
-            setActiveTab('loans');
-          }}
-        />
-      )}
 
       {paymentLoan && (
         <RecordPaymentModal
@@ -492,10 +638,12 @@ const MainShell: React.FC = () => {
       <NotificationCenterModal
         onRecordPayment={(loan) => setPaymentLoan(loan)}
         onOpenLoanDetail={(loanId) => {
+          setShowCreateLoan({ open: false });
           setSelectedLoanId(loanId);
           setActiveTab('loans');
         }}
         onOpenSettings={() => {
+          setShowCreateLoan({ open: false });
           setActiveTab('settings');
           window.setTimeout(() => {
             document

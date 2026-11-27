@@ -206,7 +206,21 @@
     "sharePortalLink": "តំណភ្ជាប់សម្រាប់អ្នកខ្ចី",
     "sendReminder": "ផ្ញើការរំលឹក",
     "calendarTitle": "ប្រតិទិនថ្ងៃត្រូវសងប្រាក់",
-    "noDueOnDate": "មិនមានប្រាក់ត្រូវសងនៅថ្ងៃនេះទេ។"
+    "noDueOnDate": "មិនមានប្រាក់ត្រូវសងនៅថ្ងៃនេះទេ។",
+    "sectionBorrowerTerms": "ព័ត៌មានអ្នកខ្ចី និងលក្ខខណ្ឌកម្ចី",
+    "sectionFeesPenalties": "ថ្លៃសេវា និងប្រាក់ពិន័យយឺត",
+    "sectionCollateralSignature": "វត្ថុបញ្ចាំ និងហត្ថលេខា",
+    "collateralPlaceholder": "ផ្លាកលេខម៉ូតូ ប្លង់ដី...",
+    "photoReady": "បានភ្ជាប់រូបភាព",
+    "noBorrowersHint": "សូមបន្ថែមអ្នកខ្ចីជាមុនសិន មុននឹងបង្កើតកម្ចី។",
+    "imageProcessError": "មិនអាចដំណើរការរូបភាពបានទេ",
+    "createError": "មិនអាចបង្កើតកម្ចីបានទេ",
+    "selectBorrowerPlaceholder": "ជ្រើសរើសអ្នកខ្ចី...",
+    "searchBorrowerPlaceholder": "ស្វែងរកតាមឈ្មោះ លេខសម្គាល់ ឬលេខទូរស័ព្ទ...",
+    "drawerSelectBorrowerTitle": "ជ្រើសរើសអ្នកខ្ចី",
+    "noMatchingBorrowers": "មិនមានអ្នកខ្ចីដែលត្រូវនឹងការស្វែងរកទេ។",
+    "clearSearch": "សម្អាតការស្វែងរក",
+    "borrowerCount": "អ្នកខ្ចី {{count}} នាក់"
   },
   "payment": {
     "title": "កត់ត្រាការបង់ប្រាក់",
@@ -303,7 +317,9 @@
     "clearDemoButton": "សម្អាតទិន្នន័យសាកល្បង",
     "clearingDemo": "កំពុងសម្អាត...",
     "clearDemoSuccess": "បានសម្អាតទិន្នន័យសាកល្បងដោយជោគជ័យ។",
-    "clearDemoNothing": "មិនមានទិន្នន័យសាកល្បងសម្រាប់សម្អាតទេ។"
+    "clearDemoNothing": "មិនមានទិន្នន័យសាកល្បងសម្រាប់សម្អាតទេ។",
+    "versionLabel": "កំណែកម្មវិធី",
+    "aboutAppDesc": "សៀវភៅកត់ត្រាប្រាក់កម្ចីផ្ទាល់ខ្លួនសម្រាប់កម្ពុជា"
   },
   "portal": {
     "title": "សង្ខេបកម្ចីសម្រាប់អ្នកខ្ចី",
@@ -317,5 +333,14 @@
     "downloadPdf": "ទាញយក PDF",
     "downloadExcel": "ទាញយក Excel (.xlsx)",
     "notFound": "តំណភ្ជាប់នេះមិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ។"
+  },
+  "datePicker": {
+    "selectDate": "ជ្រើសរើសកាលបរិច្ឆេទ",
+    "today": "ថ្ងៃនេះ",
+    "clear": "សម្អាត",
+    "prevMonth": "ខែមុន",
+    "nextMonth": "ខែបន្ទាប់",
+    "month": "ខែ",
+    "year": "ឆ្នាំ"
   }
 }
