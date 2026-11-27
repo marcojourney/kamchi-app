@@ -175,6 +175,24 @@ const MainShell: React.FC = () => {
     { id: 'settings', label: t('nav.settings'), icon: Settings },
   ];
 
+  const navGroups: Array<{
+    title: string;
+    items: Array<{
+      id: NavTab;
+      label: string;
+      icon: React.FC<{ className?: string; strokeWidth?: number }>;
+    }>;
+  }> = [
+    {
+      title: t('nav.groupOperationsCore'),
+      items: navItems.filter((item) => item.id !== 'settings'),
+    },
+    {
+      title: t('nav.groupSystemSecurity'),
+      items: navItems.filter((item) => item.id === 'settings'),
+    },
+  ];
+
   const profileDisplayName =
     profile?.displayName || user?.displayName || t('app.name');
   const safeLenderLogo =
@@ -204,29 +222,37 @@ const MainShell: React.FC = () => {
             />
           </div>
 
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const active = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id === 'reports') setReportsSubTabRequest(null);
-                    setActiveTab(item.id);
-                  }}
-                  className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">{item.label}</span>
-                </button>
-              );
-            })}
+          <nav aria-label="Sidebar" className="space-y-5">
+            {navGroups.map((group) => (
+              <div key={group.title} className="space-y-1">
+                <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {group.title}
+                </p>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-current={active ? 'page' : undefined}
+                      onClick={() => {
+                        if (item.id === 'reports') setReportsSubTabRequest(null);
+                        setActiveTab(item.id);
+                      }}
+                      className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
+                        active
+                          ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-semibold'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
         </div>
 

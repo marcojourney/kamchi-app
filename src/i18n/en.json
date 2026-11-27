@@ -36,6 +36,8 @@
     "useDifferentAccount": "Sign Out"
   },
   "nav": {
+    "groupOperationsCore": "OPERATIONS & CORE",
+    "groupSystemSecurity": "SYSTEM & SECURITY",
     "dashboard": "Dashboard",
     "loans": "Loans",
     "arrears": "Arrears",

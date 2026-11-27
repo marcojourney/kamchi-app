@@ -36,6 +36,8 @@
     "useDifferentAccount": "ចាកចេញ"
   },
   "nav": {
+    "groupOperationsCore": "ប្រតិបត្តិការ និងស្នូល",
+    "groupSystemSecurity": "ប្រព័ន្ធ និងសុវត្ថិភាព",
     "dashboard": "ទំព័រដើម",
     "loans": "កម្ចី",
     "arrears": "យឺតយ៉ាវ",
