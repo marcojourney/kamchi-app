@@ -87,17 +87,8 @@ export const BorrowerSelectDrawer: React.FC<BorrowerSelectDrawerProps> = ({
   return (
     <>
       {/* Tailwind Select Dropdown Trigger */}
-      <button
-        id={id}
-        type="button"
-        disabled={disabled}
-        aria-label={ariaLabel || t('loans.selectBorrower')}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => {
-          if (!disabled) setOpen(true);
-        }}
-        className={`w-full min-h-[44px] rounded-xl border bg-white dark:bg-slate-950 px-3 py-1.5 flex items-center justify-between gap-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+      <div
+        className={`w-full min-h-[44px] rounded-xl border bg-white dark:bg-slate-950 flex items-center transition-colors ${
           disabled
             ? 'border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
             : open
@@ -105,43 +96,84 @@ export const BorrowerSelectDrawer: React.FC<BorrowerSelectDrawerProps> = ({
             : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600'
         }`}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          {selectedBorrower ? (
-            <>
-              <span className="h-7 w-7 rounded-full border border-slate-200 dark:border-slate-700 bg-teal-50 dark:bg-teal-950/50 overflow-hidden flex items-center justify-center shrink-0">
-                {selectedPhoto ? (
-                  <img
-                    src={selectedPhoto}
-                    alt={selectedBorrower.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs font-bold text-teal-700 dark:text-teal-300">
-                    {selectedInitial}
-                  </span>
-                )}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
-                {selectedBorrower.name}
-                <span className="text-slate-400 dark:text-slate-500 font-normal">
-                  {' · '}
-                  {selectedBorrower.phone}
+        <button
+          id={id}
+          type="button"
+          disabled={disabled}
+          aria-label={ariaLabel || t('loans.selectBorrower')}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => {
+            if (!disabled) setOpen(true);
+          }}
+          className="flex-1 min-w-0 min-h-[42px] px-3 py-1.5 flex items-center justify-between gap-2 text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed"
+        >
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {selectedBorrower ? (
+              <>
+                <span className="h-7 w-7 rounded-full border border-slate-200 dark:border-slate-700 bg-teal-50 dark:bg-teal-950/50 overflow-hidden flex items-center justify-center shrink-0">
+                  {selectedPhoto ? (
+                    <img
+                      src={selectedPhoto}
+                      alt={selectedBorrower.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-xs font-bold text-teal-700 dark:text-teal-300">
+                      {selectedInitial}
+                    </span>
+                  )}
                 </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {selectedBorrower.name}
+                  <span className="text-slate-400 dark:text-slate-500 font-normal">
+                    {' · '}
+                    {selectedBorrower.phone}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <span className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 truncate">
+                <User className="w-4 h-4 shrink-0" />
+                <span className="truncate">{t('loans.selectBorrowerPlaceholder')}</span>
               </span>
-            </>
-          ) : (
-            <span className="flex items-center gap-2 text-sm text-slate-400 dark:text-slate-500 truncate">
-              <User className="w-4 h-4 shrink-0" />
-              <span className="truncate">{t('loans.selectBorrowerPlaceholder')}</span>
-            </span>
-          )}
-        </div>
-        <ChevronDown
-          className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
-            open ? 'rotate-180 text-teal-600' : ''
-          }`}
-        />
-      </button>
+            )}
+          </div>
+          {!selectedBorrower || disabled ? (
+            <ChevronDown
+              className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
+                open ? 'rotate-180 text-teal-600' : ''
+              }`}
+            />
+          ) : null}
+        </button>
+
+        {selectedBorrower && !disabled && (
+          <div className="flex items-center pr-1.5 gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => onChange('')}
+              aria-label={t('loans.clearBorrower')}
+              title={t('loans.clearBorrower')}
+              className="min-h-[34px] min-w-[34px] flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label={t('loans.drawerSelectBorrowerTitle')}
+              className="min-h-[34px] min-w-[28px] flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+              <ChevronDown
+                className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                  open ? 'rotate-180 text-teal-600' : ''
+                }`}
+              />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Right Slide-Over Search & Borrower Selection Drawer */}
       {typeof document !== 'undefined' &&
@@ -296,6 +328,18 @@ export const BorrowerSelectDrawer: React.FC<BorrowerSelectDrawerProps> = ({
                   })
                 )}
               </div>
+
+              {selectedBorrower && !disabled && (
+                <div className="px-4 sm:px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  <button
+                    type="button"
+                    onClick={() => handleSelect('')}
+                    className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    {t('loans.clearBorrower')}
+                  </button>
+                </div>
+              )}
             </aside>
           </div>,
           document.body

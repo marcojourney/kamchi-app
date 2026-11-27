@@ -220,6 +220,7 @@
     "drawerSelectBorrowerTitle": "ជ្រើសរើសអ្នកខ្ចី",
     "noMatchingBorrowers": "មិនមានអ្នកខ្ចីដែលត្រូវនឹងការស្វែងរកទេ។",
     "clearSearch": "សម្អាតការស្វែងរក",
+    "clearBorrower": "សម្អាតអ្នកខ្ចីដែលបានជ្រើស",
     "borrowerCount": "អ្នកខ្ចី {{count}} នាក់"
   },
   "payment": {

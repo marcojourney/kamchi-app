@@ -220,6 +220,7 @@
     "drawerSelectBorrowerTitle": "Select Borrower",
     "noMatchingBorrowers": "No borrowers match your search.",
     "clearSearch": "Clear search",
+    "clearBorrower": "Clear selected borrower",
     "borrowerCount": "{{count}} borrowers"
   },
   "payment": {
