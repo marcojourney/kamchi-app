@@ -138,7 +138,7 @@
   "installmentsShell": {
     "title": "Installment Sales",
     "subtitle": "Track item sales paid in scheduled monthly or weekly installments.",
-    "newPlan": "New Installment Plan",
+    "newPlan": "New Installment",
     "importQrButton": "Import from MarketChain (QR)",
     "activeUsage": "{{count}} / {{max}} active installment plans on Free",
     "readyTitle": "Installment workspace ready",
