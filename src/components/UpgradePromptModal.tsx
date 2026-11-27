@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, KeyRound, Lock, ShieldAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { FREE_INSTALLMENT_LIMIT } from '../config/featureAccess';
 import { MAX_FREE_ACTIVE_LOANS } from '../config/license';
 import type { BlockedActionReason } from '../lib/entitlements';
 
@@ -31,6 +32,13 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
         return {
           title: t('upgradePrompt.titleFreeLimit'),
           desc: t('upgradePrompt.descFreeLimit', { maxLoans: MAX_FREE_ACTIVE_LOANS }),
+        };
+      case 'free_installment_limit':
+        return {
+          title: t('upgradePrompt.titleFreeInstallmentLimit'),
+          desc: t('upgradePrompt.descFreeInstallmentLimit', {
+            maxInstallments: FREE_INSTALLMENT_LIMIT,
+          }),
         };
       case 'pro_export':
         return {

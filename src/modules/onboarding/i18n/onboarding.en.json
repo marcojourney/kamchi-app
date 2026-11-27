@@ -1,0 +1,175 @@
+{
+  "stepProgress": "Step {{current}} of {{total}}",
+  "back": "Back",
+  "continue": "Continue",
+  "skipForNow": "Skip for now",
+  "optionalBadge": "Optional",
+  "requiredBadge": "Required",
+  "privacyDeviceNote": "Stored privately on your device only. Never uploaded without your consent.",
+  "whyWeAsk": "Shown on your receipts and contracts. Stays on this device.",
+  "welcome": {
+    "title": "Simple Lending & Installment Bookkeeping for Cambodia",
+    "subtitle": "Track loans, customer repayments, receipts, and reminders offline — ready whenever your business is.",
+    "getStarted": "Get started",
+    "languageLabel": "App language",
+    "offlineHighlight": "Works 100% offline · USD & KHR ready"
+  },
+  "businessType": {
+    "title": "How do you use KamChi?",
+    "subtitle": "Choose the workflow that fits your business today.",
+    "changeLaterNote": "You can change this later in Settings.",
+    "selectHint": "Select one option to continue.",
+    "lender": {
+      "title": "Lender",
+      "description": "I lend money to people and collect repayments.",
+      "enabledTitle": "Enabled for you:",
+      "enabledList": [
+        "Cash Loans & repayment schedules",
+        "Borrowers ledger & risk history",
+        "Due-date reminders & arrears tracking"
+      ]
+    },
+    "installmentShop": {
+      "title": "Installment Shop",
+      "description": "I sell items and customers pay in installments.",
+      "enabledTitle": "Enabled for you:",
+      "enabledList": [
+        "Installment sales & payment plans",
+        "Import from MarketChain by QR",
+        "Customer records & collection receipts"
+      ]
+    },
+    "both": {
+      "title": "Both Loans & Installments",
+      "description": "I manage cash lending as well as shop installment plans.",
+      "enabledTitle": "Enabled for you:",
+      "enabledList": [
+        "Cash Loans & repayment schedules",
+        "Installment sales & MarketChain QR import",
+        "Unified Borrowers & Customers ledger"
+      ]
+    }
+  },
+  "basicInfo": {
+    "title": "Tell us about your business",
+    "subtitle": "Your business details appear on printed PDFs, receipts, and borrower contracts.",
+    "businessNameLabel": "Business or Lender Name",
+    "businessNamePlaceholder": "e.g., Sokha Financial or Golden Phone Shop",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "e.g., 012 345 678 or +855 12 345 678",
+    "phoneHint": "Shown on customer receipts so clients can reach you.",
+    "ownerNameLabel": "Owner Name",
+    "ownerNamePlaceholder": "e.g., Dara Sok",
+    "telegramLabel": "Telegram Username",
+    "telegramPlaceholder": "@yourhandle",
+    "addressLabel": "Business Address",
+    "addressPlaceholder": "House/Street, Sangkat, Khan...",
+    "provinceLabel": "Province / City",
+    "provincePlaceholder": "Select province or city",
+    "logoLabel": "Business Logo",
+    "uploadLogo": "Choose image",
+    "takeLogoPhoto": "Take photo",
+    "removeLogo": "Remove",
+    "logoPrivacy": "Resized small on your device for crisp receipts.",
+    "currencyLabel": "Default Currency",
+    "currencyUsd": "USD ($)",
+    "currencyKhr": "KHR (៛)",
+    "currencyBoth": "Both (USD & KHR)",
+    "exchangeRateLabel": "Default Exchange Rate (KHR per $1 USD)",
+    "exchangeRateHint": "Used when converting between USD and KHR."
+  },
+  "quickDefaults": {
+    "title": "Quick Default Settings",
+    "subtitleLender": "Pre-fill new loans with your typical terms. You can still adjust any loan later.",
+    "subtitleInstallment": "Pre-fill installment plans with your shop's standard terms.",
+    "interestRateLabel": "Default Interest Rate (%)",
+    "interestTypeLabel": "Default Interest Method",
+    "interestFlat": "Flat Rate",
+    "interestReducing": "Reducing Balance",
+    "interestOnly": "Interest-Only",
+    "frequencyLabel": "Default Payment Frequency",
+    "freqDaily": "Daily",
+    "freqWeekly": "Weekly",
+    "freqMonthly": "Monthly",
+    "graceDaysLabel": "Default Grace Period (days)",
+    "lateFeeTypeLabel": "Late Penalty Type",
+    "lateFeeFixed": "Flat Fee",
+    "lateFeePercent": "Percent (%)",
+    "lateFeeValueLabel": "Default Penalty Amount",
+    "minDownPaymentLabel": "Minimum Down Payment (%)",
+    "defaultInstallmentsLabel": "Default Number of Installments",
+    "khrRoundingLabel": "KHR Rounding Step"
+  },
+  "finish": {
+    "title": "You're all set!",
+    "subtitle": "Your workspace has been configured and saved locally on this device.",
+    "summaryTypeLabel": "Business Type",
+    "summaryNameLabel": "Business Name",
+    "summaryEnabledLabel": "Enabled Modules",
+    "marketchainTipTitle": "Tip: Import sales from MarketChain",
+    "marketchainTipBody": "Open Installments > Import from MarketChain anytime to scan a MarketChain sale QR code and turn it into an installment schedule in seconds.",
+    "goToDashboard": "Go to dashboard",
+    "saving": "Finishing setup..."
+  },
+  "errors": {
+    "validationHeading": "Please check the highlighted fields:",
+    "businessNameRequired": "Please enter your business or lender name.",
+    "businessNameTooLong": "Business name must be 100 characters or fewer.",
+    "ownerNameTooLong": "Owner name must be 80 characters or fewer.",
+    "phoneRequired": "Please enter a phone number.",
+    "phoneTooLong": "Phone number is too long.",
+    "phoneInvalid": "Enter a valid Cambodian phone number (e.g., 012 345 678 or +855 12 345 678).",
+    "telegramTooLong": "Telegram username is too long.",
+    "telegramInvalid": "Telegram username can only use letters, numbers, and underscores.",
+    "addressTooLong": "Address must be 180 characters or fewer.",
+    "exchangeRateInvalid": "Enter a realistic KHR exchange rate between 1,000 and 20,000."
+  },
+  "existingUserBanner": {
+    "message": "Choose your business type to turn on the features you need",
+    "chooseNow": "Choose now",
+    "later": "Later"
+  },
+  "navigation": {
+    "customers": "Customers",
+    "installments": "Installments",
+    "marketchainImport": "Import from MarketChain",
+    "hiddenRedirectNotice": "That section is hidden for your current business type. You can switch types anytime in Settings."
+  },
+  "installmentsShell": {
+    "title": "Installment Sales",
+    "subtitle": "Track item sales paid in scheduled monthly or weekly installments.",
+    "newPlan": "New Installment Plan",
+    "importQrButton": "Import from MarketChain (QR)",
+    "activeUsage": "{{count}} / {{max}} active installment plans on Free",
+    "readyTitle": "Installment workspace ready",
+    "readyDesc": "Your Shop defaults ({{down}}% min down payment · {{count}} installments · {{step}} ៛ rounding) are saved locally and ready for your installment ledger.",
+    "importTitle": "Import from MarketChain",
+    "importSubtitle": "Scan a MarketChain POS receipt QR code to pre-fill item price, customer, and down payment.",
+    "scanQrCta": "Scan MarketChain QR",
+    "qrNotMarketchain": "Scanned QR text received. Point your camera at a MarketChain POS invoice QR code to import an installment order.",
+    "qrParsedTitle": "MarketChain QR Payload Captured",
+    "clearScan": "Clear"
+  },
+  "settingsBusiness": {
+    "cardTitle": "Business Profile & Type",
+    "cardSubtitle": "Manage your business info, logo, currency defaults, and active business mode.",
+    "activeTypeLabel": "Business Type",
+    "changeTypeButton": "Change business type",
+    "profileSubheading": "Business Information",
+    "defaultsSubheading": "Default Terms",
+    "saveButton": "Save business settings",
+    "savedToast": "Business settings saved.",
+    "switchDialog": {
+      "title": "Switch business type?",
+      "body": "Switching to {{target}} updates which menus and quick actions are visible.",
+      "willShow": "Will be shown:",
+      "willHide": "Will be hidden:",
+      "noDataDeleted": "NO data is deleted. Hidden records remain safely on your device and reappear immediately if you switch back.",
+      "existingRecordsWarning": "You currently have {{count}} saved record(s) in the section being hidden.",
+      "exportFirst": "Export backup first",
+      "confirmSwitch": "Switch to {{target}}",
+      "cancel": "Cancel",
+      "switchedToast": "Switched business mode to {{target}}."
+    }
+  }
+}

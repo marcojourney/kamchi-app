@@ -7,6 +7,7 @@ import { TERMS_VERSION } from './config/terms';
 import { preloadLicenseState } from './lib/licenseStorage';
 import { reportSwUpdateAvailable } from './lib/swUpdateBridge';
 import { preloadTermsAcceptance } from './lib/termsAcceptance';
+import { preloadOnboardingState } from './modules/onboarding/services/onboardingStorage';
 
 const updateSW = registerSW({
   immediate: true,
@@ -15,6 +16,10 @@ const updateSW = registerSW({
   },
 });
 
-Promise.all([preloadTermsAcceptance(TERMS_VERSION), preloadLicenseState()]).finally(() => {
+Promise.all([
+  preloadTermsAcceptance(TERMS_VERSION),
+  preloadLicenseState(),
+  preloadOnboardingState(),
+]).finally(() => {
   createRoot(document.getElementById('root')!).render(<App />);
 });

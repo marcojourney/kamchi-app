@@ -40,6 +40,7 @@ import { StaffRosterCard } from './StaffRosterCard';
 import { useTermsContext } from './TermsGate';
 import { APP_VERSION } from '../config/app';
 import { track } from '../lib/analytics';
+import { SettingsBusinessSection } from '../modules/onboarding';
 
 export const SettingsView: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -230,6 +231,9 @@ export const SettingsView: React.FC = () => {
 
       {/* License & Plan */}
       <SettingsLicenseCard onToast={showToast} />
+
+      {/* Business Profile, Defaults & Business Type */}
+      <SettingsBusinessSection />
 
       {/* Lender Profile */}
       <form

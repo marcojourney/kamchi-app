@@ -111,6 +111,8 @@
   "upgradePrompt": {
     "titleFreeLimit": "Free plan limit reached",
     "descFreeLimit": "The Free plan supports up to {{maxLoans}} active loans. Existing loans remain fully accessible. Upgrade to Pro for unlimited loans.",
+    "titleFreeInstallmentLimit": "Free plan installment limit reached",
+    "descFreeInstallmentLimit": "The Free plan supports up to {{maxInstallments}} active installment loans. Existing plans remain accessible. Upgrade to Pro for unlimited installment sales.",
     "titleExport": "Pro Feature: Reports & Export",
     "descExport": "Upgrade to KamChi Pro to export PDF contracts/schedules, P&L reports, and Excel workbooks.",
     "titleBackup": "Pro Feature: Backup & Restore",

@@ -4,6 +4,7 @@ import {
   GRACE_PERIOD_DAYS,
   MAX_FREE_ACTIVE_LOANS,
 } from '../config/license';
+import { FREE_INSTALLMENT_LIMIT } from '../config/featureAccess';
 import {
   dayNumberFromMs,
   dayNumberToDateIso,
@@ -40,6 +41,7 @@ export interface DerivedLicenseState {
 export type BlockedActionReason =
   | 'read_only'
   | 'free_loan_limit'
+  | 'free_installment_limit'
   | 'pro_export'
   | 'pro_backup'
   | 'pro_telegram'
@@ -281,4 +283,21 @@ export function getCreateLoanBlockReason(
 ): BlockedActionReason | null {
   if (canCreateLoan(state, activeLoanCount)) return null;
   return isReadOnly(state) ? 'read_only' : 'free_loan_limit';
+}
+
+export function canCreateInstallmentLoan(
+  state: DerivedLicenseState,
+  activeInstallmentCount: number,
+  freeLimit: number = FREE_INSTALLMENT_LIMIT
+): { allowed: boolean; blockReason: BlockedActionReason | null } {
+  if (isReadOnly(state)) {
+    return { allowed: false, blockReason: 'read_only' };
+  }
+  if (state.plan === 'pro' || state.plan === 'business') {
+    return { allowed: true, blockReason: null };
+  }
+  if (activeInstallmentCount < freeLimit) {
+    return { allowed: true, blockReason: null };
+  }
+  return { allowed: false, blockReason: 'free_installment_limit' };
 }

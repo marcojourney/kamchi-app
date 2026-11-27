@@ -2,6 +2,7 @@ import {
   getAnalyticsConfig,
   isMeasurementIdConfigured,
 } from '../config/analytics';
+import type { BusinessType } from '../config/featureAccess';
 import type { Borrower, Loan, LoanSchedule } from '../types/loan';
 import type { EffectivePlan } from './entitlements';
 import {
@@ -48,6 +49,7 @@ export type AnalyticsOnlineState = 'online' | 'offline_then_online';
 export interface AnalyticsEventParamMap {
   app_open: { online_state?: AnalyticsOnlineState };
   terms_accepted: Record<string, never>;
+  onboarding_completed: { business_type: BusinessType };
   first_borrower_added: Record<string, never>;
   first_loan_created: Record<string, never>;
   first_payment_recorded: Record<string, never>;
@@ -56,7 +58,7 @@ export interface AnalyticsEventParamMap {
   pwa_installed: Record<string, never>;
   screen_view: { screen_name: AnalyticsScreenName };
   app_error: { error_type: AnalyticsErrorType };
-  portfolio_snapshot: PortfolioSnapshot;
+  portfolio_snapshot: PortfolioSnapshot & { business_type?: BusinessType };
   feedback_opened: Record<string, never>;
 }
 
@@ -65,6 +67,7 @@ export type AnalyticsEventName = keyof AnalyticsEventParamMap;
 export const ALLOWED_ANALYTICS_EVENTS: ReadonlyArray<AnalyticsEventName> = [
   'app_open',
   'terms_accepted',
+  'onboarding_completed',
   'first_borrower_added',
   'first_loan_created',
   'first_payment_recorded',
@@ -83,6 +86,7 @@ export const ALLOWED_PARAMS_BY_EVENT: Record<
 > = {
   app_open: ['online_state'],
   terms_accepted: [],
+  onboarding_completed: ['business_type'],
   first_borrower_added: [],
   first_loan_created: [],
   first_payment_recorded: [],
@@ -91,7 +95,7 @@ export const ALLOWED_PARAMS_BY_EVENT: Record<
   pwa_installed: [],
   screen_view: ['screen_name'],
   app_error: ['error_type'],
-  portfolio_snapshot: PORTFOLIO_SNAPSHOT_KEYS,
+  portfolio_snapshot: [...PORTFOLIO_SNAPSHOT_KEYS, 'business_type'],
   feedback_opened: [],
 };
 
@@ -139,6 +143,12 @@ const SNAPSHOT_INTEGER_FIELDS = new Set<string>([
   'borrower_count',
 ]);
 
+const BUSINESS_TYPE_VALUES = new Set<BusinessType>([
+  'lender',
+  'installment_shop',
+  'both',
+]);
+
 const SNAPSHOT_ENUM_MAP: Record<string, ReadonlySet<string>> = {
   loans_tier: new Set(['0', '1-5', '6-10', '11-25', '26-50', '51-100', '100+']),
   overdue_rate_bucket: new Set(['0', '1-10', '11-25', '26+']),
@@ -149,6 +159,7 @@ const SNAPSHOT_ENUM_MAP: Record<string, ReadonlySet<string>> = {
   dominant_frequency: new Set(['daily', 'weekly', 'monthly', 'mixed']),
   plan_tier: new Set(['free', 'pro', 'business']),
   app_language: new Set(['en', 'km']),
+  business_type: BUSINESS_TYPE_VALUES,
 };
 
 export interface AnalyticsRuntimeAdapter {
@@ -221,6 +232,10 @@ export function sanitizeAnalyticsPayload(
     } else if (eventName === 'reminder_sent' && key === 'channel') {
       if (typeof value === 'string' && CHANNEL_VALUES.has(value as AnalyticsChannelName)) {
         clean.channel = value;
+      }
+    } else if (eventName === 'onboarding_completed' && key === 'business_type') {
+      if (typeof value === 'string' && BUSINESS_TYPE_VALUES.has(value as BusinessType)) {
+        clean.business_type = value;
       }
     } else if (eventName === 'app_error' && key === 'error_type') {
       if (typeof value === 'string' && ERROR_TYPE_VALUES.has(value as AnalyticsErrorType)) {
@@ -467,6 +482,7 @@ export function track<E extends AnalyticsEventName>(
     if (!sanitized) return false;
 
     // Require required payload keys on typed events that expect an enum parameter
+    if (eventName === 'onboarding_completed' && !sanitized.business_type) return false;
     if (eventName === 'feature_used' && !sanitized.feature) return false;
     if (eventName === 'reminder_sent' && !sanitized.channel) return false;
     if (eventName === 'screen_view' && !sanitized.screen_name) return false;
@@ -551,6 +567,7 @@ export async function maybeSendDailyPortfolioSnapshot(params: {
   exchangeRateKhr?: number;
   planTier?: EffectivePlan;
   appLanguage?: 'en' | 'km';
+  businessType?: BusinessType;
   now?: Date;
   useWorker?: boolean;
 }): Promise<boolean> {
@@ -589,7 +606,10 @@ export async function maybeSendDailyPortfolioSnapshot(params: {
     if (!currentConsent || !isDeviceOnline()) return false;
 
     await setLenderSizeTierProperty(snapshot.loans_tier);
-    const sent = track('portfolio_snapshot', snapshot);
+    const snapshotWithType = params.businessType
+      ? { ...snapshot, business_type: params.businessType }
+      : snapshot;
+    const sent = track('portfolio_snapshot', snapshotWithType);
     if (!sent) return false;
 
     await updateAnalyticsLocalState((prev) => ({

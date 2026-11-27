@@ -5,6 +5,7 @@ import {
   Globe,
   Home,
   Settings,
+  Store,
   UserCog,
   Users,
   X,
@@ -35,6 +36,18 @@ import { SettingsView } from './components/SettingsView';
 import { StaffView } from './components/StaffView';
 import { TermsGate, useTermsContext } from './components/TermsGate';
 import {
+  getEnabledFeatures,
+  isRouteFeatureEnabled,
+  SUPPORT_BOTH_TYPES,
+  type AppFeatureTab,
+} from './config/featureAccess';
+import {
+  ExistingUserPromptBanner,
+  InstallmentsShellView,
+  OnboardingGate,
+  useOnboarding,
+} from './modules/onboarding';
+import {
   maybeSendDailyPortfolioSnapshot,
   track,
   trackFunnelOnce,
@@ -48,10 +61,36 @@ import { APP_VERSION } from './config/app';
 import type { AgingBucketKey } from './lib/finance';
 import type { Loan, Payment } from './types/loan';
 
-type NavTab = 'dashboard' | 'loans' | 'borrowers' | 'reports' | 'staff' | 'settings';
+type NavTab = AppFeatureTab;
+
+const VALID_NAV_TABS: ReadonlySet<string> = new Set([
+  'dashboard',
+  'loans',
+  'installments',
+  'marketchain_import',
+  'borrowers',
+  'reports',
+  'staff',
+  'settings',
+]);
+
+function readDeepLinkTabFromLocation(): NavTab | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  const queryTab = params.get('tab');
+  if (queryTab && VALID_NAV_TABS.has(queryTab)) {
+    return queryTab as NavTab;
+  }
+  const hashTab = window.location.hash.replace(/^#\/?/, '').trim();
+  if (hashTab && VALID_NAV_TABS.has(hashTab)) {
+    return hashTab as NavTab;
+  }
+  return null;
+}
 
 const MainShell: React.FC = () => {
   const { t, i18n } = useTranslation();
+  const { t: tOnboarding } = useTranslation('onboarding');
   const {
     user,
     authReady,
@@ -64,9 +103,21 @@ const MainShell: React.FC = () => {
   } = useApp();
   const { licenseState, openUpgradePrompt } = useLicenseContext();
   const { analyticsConsent } = useTermsContext();
+  const { businessType, profile: onboardingProfile, state: onboardingState } = useOnboarding();
+
+  const features = useMemo(
+    () =>
+      getEnabledFeatures(businessType, licenseState.plan, {
+        supportBothTypes: SUPPORT_BOTH_TYPES,
+      }),
+    [businessType, licenseState.plan]
+  );
 
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [hiddenRouteNotice, setHiddenRouteNotice] = useState<string>('');
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const syncedOnboardingProfileRef = useRef(false);
+  const deepLinkCheckedRef = useRef(false);
   const openedOfflineRef = useRef<boolean>(
     typeof navigator !== 'undefined' && navigator.onLine === false
   );
@@ -86,6 +137,73 @@ const MainShell: React.FC = () => {
     remainingAfter: number;
   } | null>(null);
 
+  const navigateToTab = (tab: NavTab) => {
+    if (!isRouteFeatureEnabled(tab, features)) {
+      setShowCreateLoan({ open: false });
+      setActiveTab('dashboard');
+      setHiddenRouteNotice(tOnboarding('navigation.hiddenRedirectNotice'));
+      return;
+    }
+    setHiddenRouteNotice('');
+    setShowCreateLoan({ open: false });
+    if (tab === 'reports') setReportsSubTabRequest(null);
+    setActiveTab(tab);
+  };
+
+  // Enforce deep links & active tab visibility whenever businessType or URL changes
+  useEffect(() => {
+    if (!deepLinkCheckedRef.current) {
+      deepLinkCheckedRef.current = true;
+      const requested = readDeepLinkTabFromLocation();
+      if (requested) {
+        if (isRouteFeatureEnabled(requested, features)) {
+          setActiveTab(requested);
+        } else {
+          setActiveTab('dashboard');
+          setHiddenRouteNotice(tOnboarding('navigation.hiddenRedirectNotice'));
+        }
+        return;
+      }
+    }
+
+    if (!isRouteFeatureEnabled(activeTab, features)) {
+      setShowCreateLoan({ open: false });
+      setActiveTab('dashboard');
+      setHiddenRouteNotice(tOnboarding('navigation.hiddenRedirectNotice'));
+    }
+  }, [activeTab, features, tOnboarding]);
+
+  // Sync newly completed onboarding profile fields into existing UserProfile via updateSettings
+  useEffect(() => {
+    if (!authReady || !profile || syncedOnboardingProfileRef.current) return;
+    if (onboardingState.completed && !onboardingState.existingUser && onboardingProfile.name) {
+      syncedOnboardingProfileRef.current = true;
+      const mappedCurrency = onboardingProfile.defaultCurrency === 'KHR' ? 'KHR' : 'USD';
+      if (
+        profile.displayName !== onboardingProfile.name ||
+        profile.lenderPhone !== onboardingProfile.phone ||
+        profile.lenderLogoDataUrl !== onboardingProfile.logo ||
+        profile.defaultCurrency !== mappedCurrency ||
+        profile.exchangeRateKhr !== onboardingProfile.exchangeRate
+      ) {
+        void updateSettings({
+          displayName: onboardingProfile.name,
+          lenderPhone: onboardingProfile.phone,
+          lenderLogoDataUrl: onboardingProfile.logo,
+          defaultCurrency: mappedCurrency,
+          exchangeRateKhr: onboardingProfile.exchangeRate,
+        });
+      }
+    }
+  }, [
+    authReady,
+    profile,
+    onboardingState.completed,
+    onboardingState.existingUser,
+    onboardingProfile,
+    updateSettings,
+  ]);
+
   useEffect(() => {
     if (!authReady || !analyticsConsent) return;
     const onlineState = openedOfflineRef.current ? 'offline_then_online' : 'online';
@@ -103,7 +221,13 @@ const MainShell: React.FC = () => {
 
   useEffect(() => {
     if (!authReady || !analyticsConsent) return;
-    trackScreenView(activeTab === 'staff' ? 'settings' : activeTab);
+    const analyticsScreen =
+      activeTab === 'staff'
+        ? 'settings'
+        : activeTab === 'installments' || activeTab === 'marketchain_import'
+          ? 'loans'
+          : activeTab;
+    trackScreenView(analyticsScreen);
   }, [activeTab, authReady, analyticsConsent]);
 
   useEffect(() => {
@@ -115,6 +239,7 @@ const MainShell: React.FC = () => {
       exchangeRateKhr: profile?.exchangeRateKhr || 4100,
       planTier: licenseState.plan,
       appLanguage: i18n.language === 'km' ? 'km' : 'en',
+      businessType,
     });
   }, [
     authReady,
@@ -125,6 +250,7 @@ const MainShell: React.FC = () => {
     profile?.exchangeRateKhr,
     licenseState.plan,
     i18n.language,
+    businessType,
   ]);
 
   useEffect(() => {
@@ -144,6 +270,10 @@ const MainShell: React.FC = () => {
   );
 
   const requestNewLoan = (borrowerId?: string) => {
+    if (!features.loans) {
+      setHiddenRouteNotice(tOnboarding('navigation.hiddenRedirectNotice'));
+      return;
+    }
     const blockReason = getCreateLoanBlockReason(licenseState, activeLoansCount);
     if (blockReason) {
       openUpgradePrompt(blockReason);
@@ -157,7 +287,7 @@ const MainShell: React.FC = () => {
       openUpgradePrompt('read_only');
       return;
     }
-    setActiveTab('borrowers');
+    navigateToTab('borrowers');
     setOpenAddBorrower(true);
   };
 
@@ -179,17 +309,30 @@ const MainShell: React.FC = () => {
     return <PinLockModal />;
   }
 
+  const borrowersNavLabel =
+    features.installments && !features.loans
+      ? tOnboarding('navigation.customers')
+      : t('nav.borrowers');
+
   const navItems: Array<{
     id: NavTab;
     label: string;
     icon: React.FC<{ className?: string; strokeWidth?: number }>;
   }> = [
     { id: 'dashboard', label: t('nav.dashboard'), icon: Home },
-    { id: 'loans', label: t('nav.loans'), icon: FileSpreadsheet },
-    { id: 'borrowers', label: t('nav.borrowers'), icon: Users },
+    ...(features.loans
+      ? [{ id: 'loans' as NavTab, label: t('nav.loans'), icon: FileSpreadsheet }]
+      : []),
+    ...(features.installments
+      ? [{ id: 'installments' as NavTab, label: tOnboarding('navigation.installments'), icon: Store }]
+      : []),
+    { id: 'borrowers', label: borrowersNavLabel, icon: Users },
     { id: 'reports', label: t('nav.reports'), icon: BarChart3 },
     { id: 'settings', label: t('nav.settings'), icon: Settings },
   ];
+
+  // Keep mobile bottom dock compact (max 5 slots: Dashboard, Primary Workspace, Customers/Borrowers, Reports, Settings)
+  const mobileDockItems = navItems.slice(0, 5);
 
   const navGroups: Array<{
     title: string;
@@ -257,11 +400,7 @@ const MainShell: React.FC = () => {
                       key={item.id}
                       type="button"
                       aria-current={active ? 'page' : undefined}
-                      onClick={() => {
-                        setShowCreateLoan({ open: false });
-                        if (item.id === 'reports') setReportsSubTabRequest(null);
-                        setActiveTab(item.id);
-                      }}
+                      onClick={() => navigateToTab(item.id)}
                       className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
                         active
                           ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 font-semibold'
@@ -360,9 +499,7 @@ const MainShell: React.FC = () => {
                         type="button"
                         aria-current={active ? 'page' : undefined}
                         onClick={() => {
-                          setShowCreateLoan({ open: false });
-                          if (item.id === 'reports') setReportsSubTabRequest(null);
-                          setActiveTab(item.id);
+                          navigateToTab(item.id);
                           setMobileDrawerOpen(false);
                         }}
                         className={`w-full min-h-[44px] flex items-center gap-3 px-3 rounded-xl text-sm font-medium transition-colors ${
@@ -490,7 +627,34 @@ const MainShell: React.FC = () => {
             <LicenseBanner />
           </div>
 
-          {showCreateLoan.open ? (
+          <div className="mb-4 space-y-3" aria-live="polite">
+            <ExistingUserPromptBanner
+              onChooseNow={() => {
+                navigateToTab('settings');
+                window.setTimeout(() => {
+                  document
+                    .getElementById('settings-business-section')
+                    ?.scrollIntoView({ behavior: 'smooth' });
+                }, 80);
+              }}
+            />
+
+            {hiddenRouteNotice && (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/35 px-4 py-2.5 flex items-center justify-between gap-3 text-xs font-medium text-amber-900 dark:text-amber-200">
+                <span>{hiddenRouteNotice}</span>
+                <button
+                  type="button"
+                  onClick={() => setHiddenRouteNotice('')}
+                  aria-label={t('app.close')}
+                  className="min-h-[32px] min-w-[32px] flex items-center justify-center rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {showCreateLoan.open && features.loans ? (
             <CreateLoanView
               key={`create_${showCreateLoan.borrowerId || 'any'}`}
               initialBorrowerId={showCreateLoan.borrowerId}
@@ -498,19 +662,21 @@ const MainShell: React.FC = () => {
               onCreated={(loanId) => {
                 setShowCreateLoan({ open: false });
                 setSelectedLoanId(loanId);
-                setActiveTab('loans');
+                navigateToTab('loans');
               }}
             />
           ) : (
             <>
               {activeTab === 'dashboard' && (
                 <DashboardView
+                  features={features}
                   onNewLoan={() => requestNewLoan()}
                   onAddBorrower={requestAddBorrower}
                   onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
                   onOpenLoanDetail={(loanId) => {
+                    if (!features.loans) return;
                     setSelectedLoanId(loanId);
-                    setActiveTab('loans');
+                    navigateToTab('loans');
                   }}
                   onOpenArrears={(bucket = null) => {
                     setReportsSubTabRequest({
@@ -518,12 +684,14 @@ const MainShell: React.FC = () => {
                       bucket,
                       seq: Date.now(),
                     });
-                    setActiveTab('reports');
+                    navigateToTab('reports');
                   }}
+                  onOpenInstallments={() => navigateToTab('installments')}
+                  onOpenMarketChainImport={() => navigateToTab('marketchain_import')}
                 />
               )}
 
-              {activeTab === 'loans' && (
+              {activeTab === 'loans' && features.loans && (
                 <LoansView
                   selectedLoanId={selectedLoanId}
                   onSelectLoanId={setSelectedLoanId}
@@ -532,14 +700,24 @@ const MainShell: React.FC = () => {
                 />
               )}
 
+              {(activeTab === 'installments' || activeTab === 'marketchain_import') &&
+                features.installments && (
+                  <InstallmentsShellView
+                    mode={activeTab}
+                    onOpenImportTab={() => navigateToTab('marketchain_import')}
+                    onOpenInstallmentsTab={() => navigateToTab('installments')}
+                  />
+                )}
+
               {activeTab === 'borrowers' && (
                 <BorrowersView
                   externalOpenAdd={openAddBorrower}
                   onCloseExternalAdd={() => setOpenAddBorrower(false)}
                   onNewLoanForBorrower={(borrowerId) => requestNewLoan(borrowerId)}
                   onOpenLoanDetail={(loanId) => {
+                    if (!features.loans) return;
                     setSelectedLoanId(loanId);
-                    setActiveTab('loans');
+                    navigateToTab('loans');
                   }}
                 />
               )}
@@ -549,8 +727,9 @@ const MainShell: React.FC = () => {
                   subTabRequest={reportsSubTabRequest}
                   onSelectLoanForPayment={(loan) => setPaymentLoan(loan)}
                   onOpenLoanDetail={(loanId) => {
+                    if (!features.loans) return;
                     setSelectedLoanId(loanId);
-                    setActiveTab('loans');
+                    navigateToTab('loans');
                   }}
                 />
               )}
@@ -567,7 +746,7 @@ const MainShell: React.FC = () => {
             aria-label="Primary"
             className="pointer-events-auto mx-auto max-w-md rounded-2xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/70 shadow-[0_8px_30px_rgba(15,23,42,0.10)] dark:shadow-[0_10px_34px_rgba(0,0,0,0.45)] p-1.5 grid grid-cols-5 gap-1"
           >
-            {navItems.map((item) => {
+            {mobileDockItems.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
               return (
@@ -575,11 +754,7 @@ const MainShell: React.FC = () => {
                   key={item.id}
                   type="button"
                   aria-current={active ? 'page' : undefined}
-                  onClick={() => {
-                    setShowCreateLoan({ open: false });
-                    if (item.id === 'reports') setReportsSubTabRequest(null);
-                    setActiveTab(item.id);
-                  }}
+                  onClick={() => navigateToTab(item.id)}
                   className={`relative flex flex-col items-center justify-center min-h-[50px] px-1 pt-1 pb-1.5 rounded-xl transition-all duration-200 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
                     active
                       ? 'bg-teal-50/90 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 shadow-xs ring-1 ring-teal-500/15 dark:ring-teal-400/20'
@@ -658,6 +833,13 @@ const MainShell: React.FC = () => {
   );
 };
 
+const OnboardingGateWithConsent: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { analyticsConsent } = useTermsContext();
+  return <OnboardingGate analyticsConsent={analyticsConsent}>{children}</OnboardingGate>;
+};
+
 export default function App() {
   const portalParams = useMemo(() => {
     if (typeof window === 'undefined') return { shareId: null, encodedData: null };
@@ -677,13 +859,15 @@ export default function App() {
             encodedData={portalParams.encodedData}
           />
         ) : (
-          <LicenseGate>
-            <AppProvider>
-              <NotificationProvider>
-                <MainShell />
-              </NotificationProvider>
-            </AppProvider>
-          </LicenseGate>
+          <OnboardingGateWithConsent>
+            <LicenseGate>
+              <AppProvider>
+                <NotificationProvider>
+                  <MainShell />
+                </NotificationProvider>
+              </AppProvider>
+            </LicenseGate>
+          </OnboardingGateWithConsent>
         )}
       </TermsGate>
     </ErrorBoundary>

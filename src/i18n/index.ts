@@ -10,6 +10,8 @@ import notificationsEn from './notifications.en.json';
 import notificationsKm from './notifications.km.json';
 import analyticsEn from './analytics.en.json';
 import analyticsKm from './analytics.km.json';
+import onboardingEn from '../modules/onboarding/i18n/onboarding.en.json';
+import onboardingKm from '../modules/onboarding/i18n/onboarding.km.json';
 
 const browserLang =
   typeof navigator !== 'undefined' && navigator.language.toLowerCase().startsWith('km') ? 'km' : 'en';
@@ -22,6 +24,7 @@ i18n.use(initReactI18next).init({
       license: licenseEn,
       notifications: notificationsEn,
       analytics: analyticsEn,
+      onboarding: onboardingEn,
     },
     km: {
       translation: km,
@@ -29,11 +32,12 @@ i18n.use(initReactI18next).init({
       license: licenseKm,
       notifications: notificationsKm,
       analytics: analyticsKm,
+      onboarding: onboardingKm,
     },
   },
   lng: browserLang,
   fallbackLng: 'en',
-  ns: ['translation', 'terms', 'license', 'notifications', 'analytics'],
+  ns: ['translation', 'terms', 'license', 'notifications', 'analytics', 'onboarding'],
   defaultNS: 'translation',
   interpolation: {
     escapeValue: false,

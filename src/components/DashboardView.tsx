@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
-import { ArrowUpRight, Plus, UserPlus } from 'lucide-react';
+import { Plus, QrCode, Store, ArrowUpRight, UserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   Bar,
@@ -11,6 +11,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import {
+  getEnabledFeatures,
+  type EnabledFeatures,
+} from '../config/featureAccess';
 import { useApp } from '../context/AppContext';
 import {
   computeScheduleLateFee,
@@ -25,21 +29,28 @@ import { DailySummaryBanner } from './DailySummaryBanner';
 import { FeedbackRatingPrompt } from './FeedbackRatingPrompt';
 
 interface DashboardViewProps {
+  features?: EnabledFeatures;
   onNewLoan: () => void;
   onAddBorrower: () => void;
   onSelectLoanForPayment: (loan: Loan) => void;
   onOpenLoanDetail: (loanId: string) => void;
   onOpenArrears: (bucket?: AgingBucketKey | null) => void;
+  onOpenInstallments?: () => void;
+  onOpenMarketChainImport?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
+  features = getEnabledFeatures('lender', 'free'),
   onNewLoan,
   onAddBorrower,
   onSelectLoanForPayment,
   onOpenLoanDetail,
   onOpenArrears,
+  onOpenInstallments,
+  onOpenMarketChainImport,
 }) => {
   const { t, i18n } = useTranslation();
+  const { t: tOnboarding } = useTranslation('onboarding');
   const { profile, loans, schedulesByLoan, payments, todayIso } = useApp();
 
   const lang = i18n.language === 'km' ? 'km' : 'en';
@@ -220,17 +231,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             className="hidden sm:flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap shrink-0"
           >
             <UserPlus className="w-4 h-4" />
-            <span>{t('dashboard.addBorrower')}</span>
+            <span>
+              {features.installments && !features.loans
+                ? tOnboarding('navigation.customers')
+                : t('dashboard.addBorrower')}
+            </span>
           </button>
 
-          <button
-            type="button"
-            onClick={onNewLoan}
-            className="min-h-[44px] flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors whitespace-nowrap shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('dashboard.newLoan')}</span>
-          </button>
+          {features.loans && (
+            <button
+              type="button"
+              onClick={onNewLoan}
+              className="min-h-[44px] flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors whitespace-nowrap shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('dashboard.newLoan')}</span>
+            </button>
+          )}
+
+          {features.marketchainImport && onOpenMarketChainImport && (
+            <button
+              type="button"
+              onClick={onOpenMarketChainImport}
+              className="hidden sm:flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 whitespace-nowrap shrink-0"
+            >
+              <QrCode className="w-4 h-4 text-teal-600" />
+              <span>{tOnboarding('navigation.marketchainImport')}</span>
+            </button>
+          )}
+
+          {features.installments && onOpenInstallments && (
+            <button
+              type="button"
+              onClick={onOpenInstallments}
+              className="min-h-[44px] flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors whitespace-nowrap shrink-0"
+            >
+              <Store className="w-4 h-4" />
+              <span>{tOnboarding('installmentsShell.newPlan')}</span>
+            </button>
+          )}
         </div>
       </div>
 
