@@ -13,8 +13,11 @@ interface BarcodeDetectorCtor {
 }
 
 interface QrScannerModalProps {
-  onDetected: (licenseKey: string) => void;
+  onDetected: (value: string) => void;
   onClose: () => void;
+  mode?: 'license' | 'any';
+  title?: string;
+  subtitle?: string;
 }
 
 function createNativeQrDetector(): BarcodeDetectorLike | null {
@@ -79,7 +82,13 @@ function loadImageFromFile(file: File): Promise<HTMLImageElement> {
   });
 }
 
-export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onDetected, onClose }) => {
+export const QrScannerModal: React.FC<QrScannerModalProps> = ({
+  onDetected,
+  onClose,
+  mode = 'license',
+  title,
+  subtitle,
+}) => {
   const { t, i18n } = useTranslation('license');
   const isKm = i18n.language.startsWith('km');
 
@@ -135,6 +144,11 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onDetected, onCl
     const handleQrPayload = (rawValue: string): boolean => {
       const trimmed = rawValue.trim();
       if (!trimmed) return false;
+      if (mode === 'any') {
+        stopCamera();
+        onDetectedRef.current(trimmed);
+        return true;
+      }
       if (trimmed.toUpperCase().includes('KC1')) {
         stopCamera();
         onDetectedRef.current(extractLicenseKeyFromText(trimmed));
@@ -240,7 +254,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onDetected, onCl
       active = false;
       stopCamera();
     };
-  }, [facingMode, stopCamera, t]);
+  }, [facingMode, mode, stopCamera, t]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -276,7 +290,10 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onDetected, onCl
         return;
       }
 
-      if (foundText.toUpperCase().includes('KC1')) {
+      if (mode === 'any') {
+        stopCamera();
+        onDetectedRef.current(foundText);
+      } else if (foundText.toUpperCase().includes('KC1')) {
         stopCamera();
         onDetectedRef.current(extractLicenseKeyFromText(foundText));
       } else {
@@ -303,10 +320,10 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({ onDetected, onCl
                 isKm ? 'leading-[1.7]' : ''
               }`}
             >
-              {t('qr.title')}
+              {title || t('qr.title')}
             </h2>
             <p className={`text-xs text-slate-500 dark:text-slate-400 ${isKm ? 'leading-[1.75]' : ''}`}>
-              {t('qr.subtitle')}
+              {subtitle || t('qr.subtitle')}
             </p>
           </div>
           <button

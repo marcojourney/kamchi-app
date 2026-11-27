@@ -148,7 +148,22 @@
     "scanQrCta": "Scan MarketChain QR",
     "qrNotMarketchain": "Scanned QR text received. Point your camera at a MarketChain POS invoice QR code to import an installment order.",
     "qrParsedTitle": "MarketChain QR Payload Captured",
-    "clearScan": "Clear"
+    "clearScan": "Clear",
+    "sampleQrButton": "Test QR",
+    "sampleQrTitle": "Sample MarketChain Test QR",
+    "sampleQrDesc": "Scan this QR code with your camera, or download the PNG and upload it via \"Choose QR image\" after clicking New Installment.",
+    "downloadTestQr": "Download PNG",
+    "useSampleNow": "Simulate Scan",
+    "parsedSummary": "Parsed Sale Order",
+    "formTitle": "New Installment",
+    "formSubtitle": "Enter sale details manually or import from a MarketChain QR code.",
+    "itemLabel": "Item / Product",
+    "customerLabel": "Customer Name",
+    "phoneLabel": "Phone Number",
+    "totalLabel": "Total Price",
+    "downPaymentLabel": "Down Payment",
+    "installmentsLabel": "Number of Installments",
+    "previewReady": "Installment plan summary previewed"
   },
   "settingsBusiness": {
     "cardTitle": "Business Profile & Type",

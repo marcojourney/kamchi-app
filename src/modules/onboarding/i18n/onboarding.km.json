@@ -148,7 +148,22 @@
     "scanQrCta": "ស្កេន QR MarketChain",
     "qrNotMarketchain": "បានទទួលទិន្នន័យ QR ហើយ។ សូមតម្រង់កាមេរ៉ាទៅ QR កូដវិក្កយបត្រ MarketChain POS។",
     "qrParsedTitle": "បានស្កេនទិន្នន័យ QR MarketChain",
-    "clearScan": "សម្អាត"
+    "clearScan": "សម្អាត",
+    "sampleQrButton": "QR សាកល្បង",
+    "sampleQrTitle": "QR កូដ MarketChain សម្រាប់សាកល្បង",
+    "sampleQrDesc": "ស្កេន QR កូដនេះដោយកាមេរ៉ា ឬទាញយករូបភាព PNG រួចចុច «ជ្រើសរើសរូបភាព QR» ពេលចុច បង្កើតបង់រំលស់ថ្មី។",
+    "downloadTestQr": "ទាញយករូបភាព PNG",
+    "useSampleNow": "សាកល្បងស្កេនឥឡូវ",
+    "parsedSummary": "ទិន្នន័យការលក់ដែលបានអាន",
+    "formTitle": "បង្កើតបង់រំលស់ថ្មី",
+    "formSubtitle": "បញ្ចូលព័ត៌មានលក់ដោយផ្ទាល់ ឬនាំចូលពី QR កូដ MarketChain។",
+    "itemLabel": "មុខទំនិញ / ផលិតផល",
+    "customerLabel": "ឈ្មោះអតិថិជន",
+    "phoneLabel": "លេខទូរស័ព្ទ",
+    "totalLabel": "តម្លៃសរុប",
+    "downPaymentLabel": "ប្រាក់កក់",
+    "installmentsLabel": "ចំនួនដំណាក់កាលបង់",
+    "previewReady": "បានរៀបចំសេចក្តីព្រាងគម្រោងបង់រំលស់"
   },
   "settingsBusiness": {
     "cardTitle": "ប្រវត្តិរូប និងប្រភេទអាជីវកម្ម",
