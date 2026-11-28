@@ -127,6 +127,7 @@ const MainShell: React.FC = () => {
     seq: number;
   } | null>(null);
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+  const [openInstallmentCreateSeq, setOpenInstallmentCreateSeq] = useState(0);
   const [showCreateLoan, setShowCreateLoan] = useState<{ open: boolean; borrowerId?: string }>({
     open: false,
   });
@@ -686,7 +687,10 @@ const MainShell: React.FC = () => {
                     });
                     navigateToTab('reports');
                   }}
-                  onOpenInstallments={() => navigateToTab('installments')}
+                  onOpenInstallments={() => {
+                    setOpenInstallmentCreateSeq((prev) => prev + 1);
+                    navigateToTab('installments');
+                  }}
                   onOpenMarketChainImport={() => navigateToTab('marketchain_import')}
                 />
               )}
@@ -704,6 +708,7 @@ const MainShell: React.FC = () => {
                 features.installments && (
                   <InstallmentsShellView
                     mode={activeTab}
+                    openCreateSeq={openInstallmentCreateSeq}
                     onOpenImportTab={() => navigateToTab('marketchain_import')}
                     onOpenInstallmentsTab={() => navigateToTab('installments')}
                   />
