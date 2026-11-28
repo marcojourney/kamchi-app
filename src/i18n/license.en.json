@@ -20,7 +20,7 @@
     "deviceCodeHint": "Send this code to the seller if you want a license key bound to this phone.",
     "copyCode": "Copy code",
     "copied": "Copied",
-    "sendTelegram": "Send to seller on Telegram",
+    "sendTelegram": "Send to Seller",
     "telegramPrefill": "Hello KamChi, I would like to purchase the {{plan}} plan. My Device Code is: {{deviceCode}}",
     "planSelectLabel": "Plan you want to buy",
     "keyInputLabel": "License Key",

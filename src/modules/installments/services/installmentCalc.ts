@@ -2,13 +2,17 @@ import { addMonths, addWeeks, format, isValid, parseISO } from 'date-fns';
 import { generateSafeId, roundMoney } from '../../../lib/finance';
 import type { CurrencyCode } from '../../../types/loan';
 import type {
+  AgreementType,
   CreateInstallmentPlanInput,
+  DocumentHeldRecord,
   InstallmentFrequency,
   InstallmentPaymentMethod,
   InstallmentPaymentRecord,
   InstallmentPlan,
   InstallmentScheduleItem,
   MarketChainParsedOrder,
+  OwnershipAuditLog,
+  OwnershipStatus,
 } from '../types';
 
 export function roundInstallmentAmount(
@@ -119,9 +123,10 @@ export function refreshPlanSchedulesForDate(
   plan: InstallmentPlan,
   todayIso: string
 ): InstallmentPlan {
+  const epsilon = plan.currency === 'KHR' ? 1 : 0.005;
   const schedules = plan.schedules.map((row) => {
     const remaining = Math.max(0, roundMoney(row.amountDue - row.amountPaid, plan.currency));
-    if (remaining <= (plan.currency === 'KHR' ? 1 : 0.005)) {
+    if (remaining <= epsilon) {
       return { ...row, status: 'paid' as const };
     }
     if (row.amountPaid > 0) {
@@ -136,9 +141,27 @@ export function refreshPlanSchedulesForDate(
     };
   });
 
+  const isFullyPaid = plan.remainingBalance <= epsilon;
+  let ownershipStatus = plan.ownershipStatus;
+
+  if (isFullyPaid) {
+    if (ownershipStatus === 'lender_owned') {
+      ownershipStatus = 'ready_to_transfer';
+    } else if (ownershipStatus === 'collateral_held') {
+      ownershipStatus = 'ready_to_release';
+    }
+  } else {
+    if (ownershipStatus === 'ready_to_transfer') {
+      ownershipStatus = 'lender_owned';
+    } else if (ownershipStatus === 'ready_to_release') {
+      ownershipStatus = 'collateral_held';
+    }
+  }
+
   return {
     ...plan,
     schedules,
+    ownershipStatus,
   };
 }
 
@@ -146,6 +169,9 @@ export function buildInstallmentPlan(input: CreateInstallmentPlanInput): Install
   const nowIso = new Date().toISOString();
   const todayIso = input.todayIso || nowIso.slice(0, 10);
   const startDate = (input.startDate || todayIso).slice(0, 10);
+  const agreementType: AgreementType = input.agreementType || 'installment_sale';
+  const initialOwnership: OwnershipStatus =
+    agreementType === 'purchase_financing' ? 'collateral_held' : 'lender_owned';
 
   const breakdown = generateInstallmentSchedule({
     totalPrice: input.totalPrice,
@@ -159,7 +185,13 @@ export function buildInstallmentPlan(input: CreateInstallmentPlanInput): Install
     todayIso,
   });
 
-  const status = breakdown.totalInstallmentsPayable <= 0 ? 'completed' : 'active';
+  const isFullyPaid = breakdown.totalInstallmentsPayable <= 0;
+  const status = isFullyPaid ? 'completed' : 'active';
+  const ownershipStatus = isFullyPaid
+    ? agreementType === 'purchase_financing'
+      ? 'ready_to_release'
+      : 'ready_to_transfer'
+    : initialOwnership;
 
   return {
     id: generateSafeId('inst'),
@@ -186,6 +218,18 @@ export function buildInstallmentPlan(input: CreateInstallmentPlanInput): Install
     paidAmount: 0,
     remainingBalance: breakdown.totalInstallmentsPayable,
     status,
+    agreementType,
+    ownershipStatus,
+    ownershipLogs: [
+      {
+        id: generateSafeId('owlog'),
+        timestamp: nowIso,
+        fromStatus: agreementType === 'purchase_financing' ? 'collateral_held' : 'lender_owned',
+        toStatus: ownershipStatus,
+        note: 'Initial contract creation',
+      },
+    ],
+    documentsHeld: [],
     notes: input.notes?.trim() ? input.notes.trim().slice(0, 500) : undefined,
     schedules: breakdown.schedules,
     payments: [],
@@ -256,17 +300,111 @@ export function applyPaymentToInstallmentPlan(
     createdAt: nowIso,
   };
 
+  const isFullyPaid = nextRemainingBalance <= epsilon;
+  let ownershipStatus = plan.ownershipStatus;
+  const logs = [...plan.ownershipLogs];
+
+  if (isFullyPaid) {
+    if (ownershipStatus === 'lender_owned') {
+      ownershipStatus = 'ready_to_transfer';
+      logs.unshift({
+        id: generateSafeId('owlog'),
+        timestamp: nowIso,
+        fromStatus: 'lender_owned',
+        toStatus: 'ready_to_transfer',
+        note: 'Fully paid, ready for ownership transfer',
+      });
+    } else if (ownershipStatus === 'collateral_held') {
+      ownershipStatus = 'ready_to_release';
+      logs.unshift({
+        id: generateSafeId('owlog'),
+        timestamp: nowIso,
+        fromStatus: 'collateral_held',
+        toStatus: 'ready_to_release',
+        note: 'Fully paid, ready for collateral release',
+      });
+    }
+  }
+
   const updatedPlan: InstallmentPlan = {
     ...plan,
     schedules: updatedSchedules,
     payments: [record, ...plan.payments],
     paidAmount: nextPaidTotal,
     remainingBalance: nextRemainingBalance,
-    status: nextRemainingBalance <= epsilon ? 'completed' : 'active',
+    status: isFullyPaid ? 'completed' : 'active',
+    ownershipStatus,
+    ownershipLogs: logs,
     updatedAt: nowIso,
   };
 
   return { updatedPlan, record };
+}
+
+export function updatePlanOwnershipStatus(
+  plan: InstallmentPlan,
+  newStatus: OwnershipStatus,
+  note?: string,
+  confirmedBy?: string,
+  signature?: string,
+  recoveredAmount?: number
+): InstallmentPlan {
+  const nowIso = new Date().toISOString();
+  const oldStatus = plan.ownershipStatus;
+
+  const log: OwnershipAuditLog = {
+    id: generateSafeId('owlog'),
+    timestamp: nowIso,
+    fromStatus: oldStatus,
+    toStatus: newStatus,
+    note: note?.trim() || undefined,
+    confirmedBy: confirmedBy?.trim() || undefined,
+    signature: signature?.trim() || undefined,
+    recoveredAmount: recoveredAmount !== undefined && Number.isFinite(recoveredAmount) ? recoveredAmount : undefined,
+  };
+
+  return {
+    ...plan,
+    ownershipStatus: newStatus,
+    ownershipLogs: [log, ...plan.ownershipLogs],
+    updatedAt: nowIso,
+  };
+}
+
+export function addDocumentHeldToPlan(
+  plan: InstallmentPlan,
+  doc: Omit<DocumentHeldRecord, 'id'>
+): InstallmentPlan {
+  const nowIso = new Date().toISOString();
+  const newDoc: DocumentHeldRecord = {
+    id: generateSafeId('doc'),
+    description: doc.description.trim(),
+    condition: doc.condition.trim(),
+    dateReceived: doc.dateReceived,
+    returnDate: doc.returnDate,
+    customerSignature: doc.customerSignature,
+    lenderSignature: doc.lenderSignature,
+  };
+
+  return {
+    ...plan,
+    documentsHeld: [...plan.documentsHeld, newDoc],
+    updatedAt: nowIso,
+  };
+}
+
+export function updateDocumentHeldInPlan(
+  plan: InstallmentPlan,
+  docId: string,
+  updates: Partial<DocumentHeldRecord>
+): InstallmentPlan {
+  const nowIso = new Date().toISOString();
+  const nextDocs = plan.documentsHeld.map((d) => (d.id === docId ? { ...d, ...updates } : d));
+  return {
+    ...plan,
+    documentsHeld: nextDocs,
+    updatedAt: nowIso,
+  };
 }
 
 export function tryParseMarketChainPayload(raw: string): MarketChainParsedOrder | null {
@@ -280,6 +418,8 @@ export function tryParseMarketChainPayload(raw: string): MarketChainParsedOrder 
     ) {
       const currency: CurrencyCode | undefined =
         parsed.currency === 'KHR' ? 'KHR' : parsed.currency === 'USD' ? 'USD' : undefined;
+      const agreementType: AgreementType | undefined =
+        parsed.agreementType === 'purchase_financing' ? 'purchase_financing' : parsed.agreementType === 'installment_sale' ? 'installment_sale' : undefined;
       return {
         source: typeof parsed.source === 'string' ? parsed.source : undefined,
         invoiceId: typeof parsed.invoiceId === 'string' ? parsed.invoiceId : undefined,
@@ -300,6 +440,7 @@ export function tryParseMarketChainPayload(raw: string): MarketChainParsedOrder 
           typeof parsed.installments === 'number' && Number.isFinite(parsed.installments)
             ? Math.max(1, Math.min(120, Math.round(parsed.installments)))
             : undefined,
+        agreementType,
       };
     }
     return null;

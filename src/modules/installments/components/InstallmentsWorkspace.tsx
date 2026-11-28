@@ -5,11 +5,14 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
+  FileText,
   Plus,
   Printer,
   QrCode,
   Receipt,
   Search,
+  ShieldAlert,
+  ShieldCheck,
   Store,
   Trash2,
   UserCheck,
@@ -28,21 +31,34 @@ import { formatCurrency, formatDateLocalized } from '../../../lib/finance';
 import type { CurrencyCode } from '../../../types/loan';
 import { useBusinessProfile } from '../../onboarding/hooks/useBusinessProfile';
 import {
+  addDocumentHeldToPlan,
   generateInstallmentSchedule,
   refreshPlanSchedulesForDate,
   tryParseMarketChainPayload,
+  updateDocumentHeldInPlan,
+  updatePlanOwnershipStatus,
 } from '../services/installmentCalc';
 import {
   createInstallmentPlan,
   deleteInstallmentPlan,
   listInstallmentPlans,
   recordInstallmentPlanPayment,
+  updateInstallmentPlan,
 } from '../services/installmentStorage';
+import {
+  exportDocumentReceiptPdf,
+  exportInstallmentClearancePdf,
+  exportInstallmentPlanPdf,
+  exportInstallmentReceiptPdf,
+} from '../services/installmentExport';
 import type {
+  AgreementType,
+  DocumentHeldRecord,
   InstallmentFrequency,
   InstallmentPaymentMethod,
   InstallmentPaymentRecord,
   InstallmentPlan,
+  OwnershipStatus,
 } from '../types';
 
 export const SAMPLE_MARKETCHAIN_QR_ORDER = {
@@ -55,6 +71,7 @@ export const SAMPLE_MARKETCHAIN_QR_ORDER = {
   total: 480,
   downPayment: 100,
   installments: 6,
+  agreementType: 'installment_sale',
 } as const;
 
 export const SAMPLE_MARKETCHAIN_QR_PAYLOAD = JSON.stringify(SAMPLE_MARKETCHAIN_QR_ORDER);
@@ -100,6 +117,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
 
   // Create form state
   const [formSource, setFormSource] = useState<'manual' | 'marketchain'>('manual');
+  const [agreementType, setAgreementType] = useState<AgreementType>('installment_sale');
   const [invoiceId, setInvoiceId] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
@@ -133,6 +151,16 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
   const [payError, setPayError] = useState('');
   const [receiptRecord, setReceiptRecord] = useState<InstallmentPaymentRecord | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  // Document Held & Ownership Action modals
+  const [docModalOpen, setDocModalOpen] = useState(false);
+  const [docDesc, setDocDesc] = useState('');
+  const [docCondition, setDocCondition] = useState('');
+  const [docReceivedDate, setDocReceivedDate] = useState(todayIso);
+  const [ownershipModalOpen, setOwnershipModalOpen] = useState(false);
+  const [targetOwnershipStatus, setTargetOwnershipStatus] = useState<OwnershipStatus | null>(null);
+  const [ownershipNote, setOwnershipNote] = useState('');
 
   const loadPlans = useCallback(async () => {
     setLoading(true);
@@ -200,6 +228,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
   const resetCreateForm = useCallback(
     (preserveDefaults = true) => {
       setFormSource('manual');
+      setAgreementType('installment_sale');
       setInvoiceId('');
       setCustomerId('');
       setCustomerSearch('');
@@ -257,6 +286,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
 
       if (parsed) {
         setFormSource('marketchain');
+        if (parsed.agreementType) setAgreementType(parsed.agreementType);
         if (parsed.invoiceId) setInvoiceId(parsed.invoiceId);
         if (parsed.item) setItemName(parsed.item);
         if (parsed.customerName) {
@@ -471,7 +501,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
               phone: customerPhone.trim() || '-',
             });
           } catch {
-            // Non-blocking: plan still saves cleanly even if borrower ledger is full/read-only
+            // Non-blocking
           }
         }
       }
@@ -490,6 +520,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
         installmentCount: countNum,
         frequency,
         startDate: startDate || todayIso,
+        agreementType,
         khrRoundingStep: defaults.installment.khrRoundingStep,
         notes: notes.trim() || undefined,
         todayIso,
@@ -559,6 +590,112 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
     setViewMode('list');
   };
 
+  const handleUpdateOwnership = async (newStatus: OwnershipStatus, note?: string) => {
+    if (!selectedPlan) return;
+    const updated = updatePlanOwnershipStatus(
+      selectedPlan,
+      newStatus,
+      note || ownershipNote,
+      businessProfile.name || 'Lender'
+    );
+    const saved = await updateInstallmentPlan(updated);
+    const nextList = plans.map((p) => (p.id === saved.id ? saved : p));
+    setPlans(nextList);
+    setOwnershipModalOpen(false);
+    setOwnershipNote('');
+    setTargetOwnershipStatus(null);
+  };
+
+  const handleAddDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlan || !docDesc.trim()) return;
+    const updated = addDocumentHeldToPlan(selectedPlan, {
+      description: docDesc.trim(),
+      condition: docCondition.trim() || 'Good',
+      dateReceived: docReceivedDate || todayIso,
+    });
+    const saved = await updateInstallmentPlan(updated);
+    const nextList = plans.map((p) => (p.id === saved.id ? saved : p));
+    setPlans(nextList);
+    setDocModalOpen(false);
+    setDocDesc('');
+    setDocCondition('');
+  };
+
+  const handleReturnDocument = async (docId: string) => {
+    if (!selectedPlan) return;
+    const updated = updateDocumentHeldInPlan(selectedPlan, docId, { returnDate: todayIso });
+    const saved = await updateInstallmentPlan(updated);
+    const nextList = plans.map((p) => (p.id === saved.id ? saved : p));
+    setPlans(nextList);
+  };
+
+  const handleExportDetailPdf = async () => {
+    if (!selectedPlan || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportInstallmentPlanPdf({
+        plan: selectedPlan,
+        businessProfile,
+        lang,
+        useKhmerNumerals: useKh,
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportClearance = async () => {
+    if (!selectedPlan || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportInstallmentClearancePdf({
+        plan: selectedPlan,
+        businessProfile,
+        lang,
+        useKhmerNumerals: useKh,
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportReceiptPdf = async () => {
+    if (!selectedPlan || !receiptRecord || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportInstallmentReceiptPdf({
+        plan: selectedPlan,
+        payment: receiptRecord,
+        businessProfile,
+        lang,
+        useKhmerNumerals: useKh,
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportDocReceipt = async (doc: DocumentHeldRecord) => {
+    if (!selectedPlan || exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      await exportDocumentReceiptPdf({
+        plan: selectedPlan,
+        document: doc,
+        businessProfile,
+        lang,
+        useKhmerNumerals: useKh,
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleTriggerPrint = () => {
+    window.print();
+  };
+
   const fmt = (amount: number, cur: CurrencyCode) =>
     formatCurrency(amount, cur, lang, useKh);
 
@@ -568,76 +705,42 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
     return t('paymentModal.methodCash');
   };
 
+  const agreementWording = (plan: InstallmentPlan) => {
+    const isInstallmentSale = plan.agreementType !== 'purchase_financing';
+    return isInstallmentSale ? t('ownership.soldWording') : t('ownership.collateralWording');
+  };
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {toastMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="rounded-xl border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950/50 px-4 py-3 flex items-center justify-between gap-3 text-xs font-semibold text-teal-800 dark:text-teal-200"
+          className="rounded-xl border border-teal-200 dark:border-teal-900/60 bg-teal-50 dark:bg-teal-950/40 px-4 py-3 text-xs font-semibold text-teal-800 dark:text-teal-200 shadow-sm print:hidden"
         >
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
-            <span>{toastMessage}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setToastMessage('')}
-            className="text-teal-700 dark:text-teal-300 hover:opacity-75"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {toastMessage}
         </div>
       )}
 
       {viewMode === 'create' ? (
-        <div className="space-y-5">
-          {/* Create Form Top Bar */}
+        <div className="space-y-5 print:hidden">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewMode('list');
-                  if (mode === 'marketchain_import') onOpenInstallmentsTab();
-                }}
-                aria-label={t('form.backToList')}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  {t('form.createTitle')}
-                </h1>
-                <p
-                  className={`text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5 ${
-                    isKm ? 'leading-[1.7]' : ''
-                  }`}
-                >
-                  {t('form.createSubtitle')}
-                </p>
-              </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {t('form.createTitle')}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                {t('form.createSubtitle')}
+              </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSampleModalOpen(true)}
-                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <QrCode className="w-4 h-4 text-teal-600" />
-                <span>{t('testQrButton')}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setScannerOpen(true)}
-                className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl bg-teal-50 dark:bg-teal-950/50 border border-teal-200 dark:border-teal-800 px-3.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50"
-              >
-                <QrCode className="w-4 h-4" />
-                <span>{t('form.scanQrBtn')}</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className="min-h-[44px] inline-flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t('form.backToList')}</span>
+            </button>
           </div>
 
           {scannedRawBanner && (
@@ -667,13 +770,43 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
 
           <form onSubmit={handleCreateSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
             <div className="lg:col-span-7 space-y-5">
+              {/* Agreement Type */}
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-3">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {t('form.agreementTypeLabel')}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setAgreementType('installment_sale')}
+                    className={`min-h-[50px] p-3 rounded-xl border text-left text-xs font-medium transition-colors ${
+                      agreementType === 'installment_sale'
+                        ? 'border-teal-600 bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-200 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <p className="font-bold">{t('form.installmentSaleOpt')}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgreementType('purchase_financing')}
+                    className={`min-h-[50px] p-3 rounded-xl border text-left text-xs font-medium transition-colors ${
+                      agreementType === 'purchase_financing'
+                        ? 'border-teal-600 bg-teal-50 dark:bg-teal-950/40 text-teal-900 dark:text-teal-200 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <p className="font-bold">{t('form.purchaseFinancingOpt')}</p>
+                  </button>
+                </div>
+              </div>
+
               {/* Customer Section */}
               <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
                 <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   {t('form.customerSection')}
                 </h2>
 
-                {/* Searchable Tailwind Customer Dropdown */}
                 <div ref={customerDropdownRef} className="relative">
                   <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
                     {t('form.pickExistingCustomer')}
@@ -696,7 +829,6 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
                         type="button"
                         onClick={handleClearSelectedCustomer}
                         aria-label={t('form.clearCustomer')}
-                        title={t('form.clearCustomer')}
                         className="min-h-[44px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
                       >
                         <X className="w-4 h-4" />
@@ -1088,83 +1220,103 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
           </form>
         </div>
       ) : viewMode === 'detail' && selectedPlan ? (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedPlanId(null);
-                  setViewMode('list');
-                }}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </button>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
-                    {selectedPlan.itemName}
-                  </h1>
-                  <span
-                    className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                      selectedPlan.status === 'completed'
-                        ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                        : isPlanOverdue(selectedPlan)
-                          ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300'
-                          : 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300'
-                    }`}
-                  >
-                    {selectedPlan.status === 'completed'
-                      ? t('status.completed')
-                      : isPlanOverdue(selectedPlan)
-                        ? t('status.overdue')
-                        : t('status.active')}
-                  </span>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                  {selectedPlan.customerName}
-                  {selectedPlan.customerPhone ? ` · ${selectedPlan.customerPhone}` : ''}
-                  {selectedPlan.invoiceId
-                    ? ` · ${t('detail.invoice', { id: selectedPlan.invoiceId })}`
-                    : ''}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {selectedPlan.payments.length > 0 && (
+        <>
+          <div className="space-y-5 print:hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
-                  onClick={() => setReceiptRecord(selectedPlan.payments[0])}
+                  onClick={() => {
+                    setSelectedPlanId(null);
+                    setViewMode('list');
+                  }}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {selectedPlan.itemName}
+                    </h1>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                        selectedPlan.status === 'completed'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                          : isPlanOverdue(selectedPlan)
+                            ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300'
+                            : 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300'
+                      }`}
+                    >
+                      {selectedPlan.status === 'completed'
+                        ? t('status.completed')
+                        : isPlanOverdue(selectedPlan)
+                          ? t('status.overdue')
+                          : t('status.active')}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    {selectedPlan.customerName}
+                    {selectedPlan.customerPhone ? ` · ${selectedPlan.customerPhone}` : ''}
+                    {selectedPlan.invoiceId
+                      ? ` · ${t('detail.invoice', { id: selectedPlan.invoiceId })}`
+                      : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={exportingPdf}
+                  onClick={() => void handleExportDetailPdf()}
+                  className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60"
+                >
+                  <FileText className="w-4 h-4 text-teal-600" />
+                  <span>{exportingPdf ? t('exportingPdf') : t('detail.exportPdf')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerPrint}
                   className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
-                  <Receipt className="w-4 h-4 text-teal-600" />
-                  <span>{t('detail.viewReceipt')}</span>
+                  <Printer className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                  <span>{t('detail.print')}</span>
                 </button>
-              )}
 
-              {selectedPlan.status === 'active' && selectedPlan.remainingBalance > 0 && (
+                {selectedPlan.payments.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setReceiptRecord(selectedPlan.payments[0])}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <Receipt className="w-4 h-4 text-teal-600" />
+                    <span>{t('detail.viewReceipt')}</span>
+                  </button>
+                )}
+
+                {selectedPlan.status === 'active' && selectedPlan.remainingBalance > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => openPaymentDialog(selectedPlan)}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 text-xs font-semibold"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    <span>{t('detail.recordPayment')}</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => openPaymentDialog(selectedPlan)}
-                  className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 text-xs font-semibold"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  aria-label={t('detail.deletePlan')}
+                  className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-red-200 dark:border-red-900/60 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
-                  <Wallet className="w-4 h-4" />
-                  <span>{t('detail.recordPayment')}</span>
+                  <Trash2 className="w-4 h-4" />
                 </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmOpen(true)}
-                aria-label={t('detail.deletePlan')}
-                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl border border-red-200 dark:border-red-900/60 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              </div>
             </div>
-          </div>
 
           {/* Detail Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -1198,6 +1350,165 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
                 {fmt(selectedPlan.remainingBalance, selectedPlan.currency)}
               </p>
             </div>
+          </div>
+
+          {/* Ownership & Collateral Card */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-teal-600" />
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {t('ownership.title')}
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300">
+                    {t(`ownership.${selectedPlan.ownershipStatus}` as any) || selectedPlan.ownershipStatus}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                  {agreementWording(selectedPlan)}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {(selectedPlan.ownershipStatus === 'ready_to_transfer' ||
+                  selectedPlan.ownershipStatus === 'ready_to_release') && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleUpdateOwnership(
+                          selectedPlan.agreementType === 'purchase_financing' ? 'released' : 'transferred',
+                          'Confirmed by lender upon full payment'
+                        )
+                      }
+                      className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-3.5 text-xs font-semibold"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>
+                        {selectedPlan.agreementType === 'purchase_financing'
+                          ? t('ownership.confirmReleaseBtn')
+                          : t('ownership.confirmTransferBtn')}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={exportingPdf}
+                      onClick={() => void handleExportClearance()}
+                      className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100"
+                    >
+                      <FileText className="w-4 h-4 text-teal-600" />
+                      <span>{t('ownership.clearanceLetterBtn')}</span>
+                    </button>
+                  </>
+                )}
+
+                {selectedPlan.ownershipStatus === 'transferred' ||
+                selectedPlan.ownershipStatus === 'released' ? (
+                  <button
+                    type="button"
+                    disabled={exportingPdf}
+                    onClick={() => void handleExportClearance()}
+                    className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100"
+                  >
+                    <FileText className="w-4 h-4 text-teal-600" />
+                    <span>{t('ownership.clearanceLetterBtn')}</span>
+                  </button>
+                ) : null}
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOwnership('repossessed', 'Item repossessed')}
+                    className="min-h-[36px] px-2.5 rounded-lg border border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 text-xs font-semibold hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                  >
+                    {t('ownership.repossessBtn')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOwnership('returned', 'Item returned')}
+                    className="min-h-[36px] px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    {t('ownership.returnBtn')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateOwnership('written_off', 'Written off')}
+                    className="min-h-[36px] px-2.5 rounded-lg border border-red-200 dark:border-red-900/60 text-red-600 text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/30"
+                  >
+                    {t('ownership.writeOffBtn')}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+              {t('ownership.note')}
+            </p>
+          </div>
+
+          {/* Documents Held Section */}
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {t('documents.title')}
+                </h2>
+                {selectedPlan.remainingBalance <= (selectedPlan.currency === 'KHR' ? 1 : 0.005) &&
+                  selectedPlan.documentsHeld.some((d) => !d.returnDate) && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mt-1">
+                      {t('documents.reminder')}
+                    </p>
+                  )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDocModalOpen(true)}
+                className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100"
+              >
+                <Plus className="w-4 h-4 text-teal-600" />
+                <span>{t('documents.addBtn')}</span>
+              </button>
+            </div>
+
+            {selectedPlan.documentsHeld.length === 0 ? (
+              <p className="text-xs text-slate-500 py-3 text-center">
+                No held documents recorded for this agreement.
+              </p>
+            ) : (
+              <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                {selectedPlan.documentsHeld.map((doc) => (
+                  <div key={doc.id} className="py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">{doc.description}</p>
+                      <p className="text-slate-500 text-[11px] mt-0.5">
+                        {t('documents.conditionLabel')}: {doc.condition} · {t('documents.receivedDate')}: {formatDateLocalized(doc.dateReceived, lang, useKh)}
+                        {doc.returnDate ? ` · Returned: ${formatDateLocalized(doc.returnDate, lang, useKh)}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={exportingPdf}
+                        onClick={() => void handleExportDocReceipt(doc)}
+                        className="min-h-[36px] px-3 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200"
+                      >
+                        {t('documents.receiptBtn')}
+                      </button>
+                      {!doc.returnDate && (
+                        <button
+                          type="button"
+                          onClick={() => void handleReturnDocument(doc.id)}
+                          className="min-h-[36px] px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold"
+                        >
+                          {t('documents.returnAction')}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -1302,13 +1613,159 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
                   ))}
                 </div>
               )}
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Dedicated Printable A4 Installment Plan & Agreement Sheet */}
+          {!receiptRecord && (
+            <div className="hidden print:block bg-white text-slate-900 p-6 space-y-5">
+              <div className="flex items-end justify-between border-b-2 border-teal-600 pb-4">
+                <div>
+                  <img
+                    src={
+                      businessProfile.logo && businessProfile.logo.startsWith('data:image/')
+                        ? businessProfile.logo
+                        : '/assets/aistudio/image_01667597.png'
+                    }
+                    alt={businessProfile.name || 'KamChi'}
+                    className="h-12 w-auto object-contain mb-2"
+                  />
+                  <h1 className="text-xl font-bold text-slate-900">
+                    {t('detail.documentTitle')}
+                  </h1>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {selectedPlan.invoiceId
+                      ? `${t('detail.invoice', { id: selectedPlan.invoiceId })} · `
+                      : ''}
+                    {selectedPlan.id}
+                  </p>
+                </div>
+                <div className="text-right text-xs text-slate-600 space-y-0.5">
+                  <p className="font-bold text-sm text-slate-900">
+                    {businessProfile.name || t('receipt.shopFallback')}
+                  </p>
+                  {(businessProfile.phone || businessProfile.address || businessProfile.province) && (
+                    <p>
+                      {[businessProfile.phone, businessProfile.address, businessProfile.province]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  )}
+                  <p>
+                    {t('form.startDateLabel')}: {formatDateLocalized(selectedPlan.startDate, lang, useKh)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs">
+                <strong>{t('ownership.title')}:</strong> {agreementWording(selectedPlan)}
+                <div className="text-[10.5px] text-slate-500 mt-1 italic">{t('ownership.note')}</div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div className="border border-slate-200 rounded-lg p-3">
+                  <p className="font-bold text-slate-900 mb-1">{t('form.customerSection')}</p>
+                  <p className="font-semibold">{selectedPlan.customerName}</p>
+                  {selectedPlan.customerPhone && (
+                    <p className="font-mono text-slate-600">{selectedPlan.customerPhone}</p>
+                  )}
+                </div>
+                <div className="border border-slate-200 rounded-lg p-3">
+                  <p className="font-bold text-slate-900 mb-1">{t('form.itemSection')}</p>
+                  <p className="font-semibold">{selectedPlan.itemName}</p>
+                  <p className="text-slate-600">
+                    {selectedPlan.installmentCount} ·{' '}
+                    {selectedPlan.frequency === 'weekly'
+                      ? t('form.freqWeekly')
+                      : t('form.freqMonthly')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-5 gap-2 text-xs">
+                <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
+                  <p className="text-slate-500">{t('detail.totalPrice')}</p>
+                  <p className="font-mono font-bold mt-0.5">
+                    {fmt(selectedPlan.totalPrice, selectedPlan.currency)}
+                  </p>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
+                  <p className="text-slate-500">{t('detail.downPayment')}</p>
+                  <p className="font-mono font-bold mt-0.5">
+                    {fmt(selectedPlan.downPayment, selectedPlan.currency)}
+                  </p>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2.5 bg-slate-50">
+                  <p className="text-slate-500">{t('detail.financed')}</p>
+                  <p className="font-mono font-bold mt-0.5">
+                    {fmt(selectedPlan.totalInstallmentsPayable, selectedPlan.currency)}
+                  </p>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2.5 bg-emerald-50">
+                  <p className="text-emerald-700">{t('detail.paidInstallments')}</p>
+                  <p className="font-mono font-bold text-emerald-700 mt-0.5">
+                    {fmt(selectedPlan.paidAmount, selectedPlan.currency)}
+                  </p>
+                </div>
+                <div className="border border-slate-200 rounded-lg p-2.5 bg-teal-50">
+                  <p className="text-teal-700">{t('detail.remainingBalance')}</p>
+                  <p className="font-mono font-bold text-teal-700 mt-0.5">
+                    {fmt(selectedPlan.remainingBalance, selectedPlan.currency)}
+                  </p>
+                </div>
+              </div>
+
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-300">
+                    <th className="p-2 text-left">#</th>
+                    <th className="p-2 text-left">{t('form.dueDateCol')}</th>
+                    <th className="p-2 text-right">{t('form.amountCol')}</th>
+                    <th className="p-2 text-right">{t('detail.paidAmountLabel')}</th>
+                    <th className="p-2 text-right">{t('detail.scheduleTitle')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedPlan.schedules.map((row) => (
+                    <tr key={row.installmentNumber} className="border-b border-slate-200">
+                      <td className="p-2 font-mono">#{row.installmentNumber}</td>
+                      <td className="p-2 font-mono">
+                        {formatDateLocalized(row.dueDate, lang, useKh)}
+                      </td>
+                      <td className="p-2 text-right font-mono font-semibold">
+                        {fmt(row.amountDue, selectedPlan.currency)}
+                      </td>
+                      <td className="p-2 text-right font-mono">
+                        {fmt(row.amountPaid, selectedPlan.currency)}
+                      </td>
+                      <td className="p-2 text-right">{t(`status.${row.status}`)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="grid grid-cols-2 gap-10 pt-8 text-xs">
+                <div>
+                  <div className="h-12 border-b border-slate-400 mb-1.5" />
+                  <p className="font-semibold">{t('detail.sellerSignature')}</p>
+                  <p className="text-slate-500">
+                    {businessProfile.name || t('receipt.shopFallback')}
+                  </p>
+                </div>
+                <div>
+                  <div className="h-12 border-b border-slate-400 mb-1.5" />
+                  <p className="font-semibold">{t('detail.customerSignature')}</p>
+                  <p className="text-slate-500">{selectedPlan.customerName}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         /* List Workspace View */
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {mode === 'marketchain_import'
@@ -1382,175 +1839,177 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
             </div>
           </div>
 
-          {licenseState.plan === 'free' && (
-            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-              {t('activeUsage', {
-                count: activeCount,
-                max: FREE_INSTALLMENT_LIMIT,
-              })}
-            </p>
-          )}
-
-          {/* KPI Strip */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-              <p className="text-xs text-slate-500">{t('kpi.activePlans')}</p>
-              <p className="text-lg sm:text-xl font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1">
-                {activeCount}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-              <p className="text-xs text-slate-500">{t('kpi.outstanding')}</p>
-              <p className="text-lg sm:text-xl font-mono font-bold text-teal-600 tabular-nums mt-1 truncate">
-                {fmt(kpiSummary.outstanding, kpiSummary.displayCurrency)}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-              <p className="text-xs text-slate-500">{t('kpi.collected')}</p>
-              <p className="text-lg sm:text-xl font-mono font-bold text-emerald-600 tabular-nums mt-1 truncate">
-                {fmt(kpiSummary.collected, kpiSummary.displayCurrency)}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
-              <p className="text-xs text-slate-500">{t('kpi.overdue')}</p>
-              <p className="text-lg sm:text-xl font-mono font-bold text-red-600 tabular-nums mt-1 truncate">
-                {fmt(kpiSummary.overdue, kpiSummary.displayCurrency)}
-              </p>
-            </div>
-          </div>
-
-          {/* Search & Status Tabs */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('filters.searchPlaceholder')}
-                className="w-full min-h-[44px] pl-10 pr-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100"
-              />
-            </div>
-            <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-x-auto">
-              {(['all', 'active', 'overdue', 'completed'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setStatusFilter(tab)}
-                  className={`min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                    statusFilter === tab
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {t(`filters.${tab}`)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Plans List or Empty State */}
-          {loading ? (
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-500">
-              ...
-            </div>
-          ) : filteredPlans.length === 0 ? (
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-3">
-              <div className="h-11 w-11 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-                <Store className="w-5 h-5" />
-              </div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {t('empty.title')}
-              </h2>
-              <p
-                className={`text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl ${
-                  isKm ? 'leading-[1.75]' : 'leading-relaxed'
-                }`}
-              >
-                {t('empty.desc')}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t('empty.shopDefaults', {
-                  down: defaults.installment.minDownPaymentPercent,
-                  count: defaults.installment.defaultInstallments,
-                  step: defaults.installment.khrRoundingStep.toLocaleString(),
+          <div className="space-y-5 print:hidden">
+            {licenseState.plan === 'free' && (
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                {t('activeUsage', {
+                  count: activeCount,
+                  max: FREE_INSTALLMENT_LIMIT,
                 })}
               </p>
-              <div className="pt-1 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={openCreateForm}
-                  className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 text-xs font-semibold"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{t('newPlan')}</span>
-                </button>
+            )}
+
+            {/* KPI Strip */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
+                <p className="text-xs text-slate-500">{t('kpi.activePlans')}</p>
+                <p className="text-lg sm:text-xl font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums mt-1">
+                  {activeCount}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
+                <p className="text-xs text-slate-500">{t('kpi.outstanding')}</p>
+                <p className="text-lg sm:text-xl font-mono font-bold text-teal-600 tabular-nums mt-1 truncate">
+                  {fmt(kpiSummary.outstanding, kpiSummary.displayCurrency)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
+                <p className="text-xs text-slate-500">{t('kpi.collected')}</p>
+                <p className="text-lg sm:text-xl font-mono font-bold text-emerald-600 tabular-nums mt-1 truncate">
+                  {fmt(kpiSummary.collected, kpiSummary.displayCurrency)}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4">
+                <p className="text-xs text-slate-500">{t('kpi.overdue')}</p>
+                <p className="text-lg sm:text-xl font-mono font-bold text-red-600 tabular-nums mt-1 truncate">
+                  {fmt(kpiSummary.overdue, kpiSummary.displayCurrency)}
+                </p>
               </div>
             </div>
-          ) : (
-            <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
-              {filteredPlans.map((plan) => {
-                const paidCount = plan.schedules.filter((s) => s.status === 'paid').length;
-                const overdue = isPlanOverdue(plan);
-                return (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedPlanId(plan.id);
-                      setViewMode('detail');
-                    }}
-                    className="w-full px-4 sm:px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 flex items-center justify-between gap-3 transition-colors"
-                  >
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                          {plan.itemName}
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
-                            plan.status === 'completed'
-                              ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                              : overdue
-                                ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300'
-                                : 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300'
-                          }`}
-                        >
-                          {plan.status === 'completed'
-                            ? t('status.completed')
-                            : overdue
-                              ? t('status.overdue')
-                              : t('status.active')}
-                        </span>
-                        {plan.invoiceId && (
-                          <span className="text-[11px] font-mono text-slate-500">
-                            #{plan.invoiceId}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {plan.customerName}
-                        {plan.customerPhone ? ` · ${plan.customerPhone}` : ''} · {paidCount}/
-                        {plan.installmentCount}
-                      </p>
-                    </div>
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
-                          {fmt(plan.remainingBalance, plan.currency)}
-                        </p>
-                        <p className="text-[11px] font-mono text-slate-500 tabular-nums">
-                          / {fmt(plan.totalPrice, plan.currency)}
+            {/* Search & Status Tabs */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('filters.searchPlaceholder')}
+                  className="w-full min-h-[44px] pl-10 pr-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm text-slate-900 dark:text-slate-100"
+                />
+              </div>
+              <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-x-auto">
+                {(['all', 'active', 'overdue', 'completed'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setStatusFilter(tab)}
+                    className={`min-h-[36px] px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                      statusFilter === tab
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {t(`filters.${tab}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Plans List or Empty State */}
+            {loading ? (
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-500">
+                ...
+              </div>
+            ) : filteredPlans.length === 0 ? (
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-3">
+                <div className="h-11 w-11 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <Store className="w-5 h-5" />
+                </div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  {t('empty.title')}
+                </h2>
+                <p
+                  className={`text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-xl ${
+                    isKm ? 'leading-[1.75]' : 'leading-relaxed'
+                  }`}
+                >
+                  {t('empty.desc')}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {t('empty.shopDefaults', {
+                    down: defaults.installment.minDownPaymentPercent,
+                    count: defaults.installment.defaultInstallments,
+                    step: defaults.installment.khrRoundingStep.toLocaleString(),
+                  })}
+                </p>
+                <div className="pt-1 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={openCreateForm}
+                    className="min-h-[44px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-4 text-xs font-semibold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{t('newPlan')}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+                {filteredPlans.map((plan) => {
+                  const paidCount = plan.schedules.filter((s) => s.status === 'paid').length;
+                  const overdue = isPlanOverdue(plan);
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPlanId(plan.id);
+                        setViewMode('detail');
+                      }}
+                      className="w-full px-4 sm:px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 flex items-center justify-between gap-3 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                            {plan.itemName}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                              plan.status === 'completed'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                                : overdue
+                                  ? 'bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300'
+                                  : 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300'
+                            }`}
+                          >
+                            {plan.status === 'completed'
+                              ? t('status.completed')
+                              : overdue
+                                ? t('status.overdue')
+                                : t('status.active')}
+                          </span>
+                          {plan.invoiceId && (
+                            <span className="text-[11px] font-mono text-slate-500">
+                              #{plan.invoiceId}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {plan.customerName}
+                          {plan.customerPhone ? ` · ${plan.customerPhone}` : ''} · {paidCount}/
+                          {plan.installmentCount}
                         </p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                            {fmt(plan.remainingBalance, plan.currency)}
+                          </p>
+                          <p className="text-[11px] font-mono text-slate-500 tabular-nums">
+                            / {fmt(plan.totalPrice, plan.currency)}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -1643,6 +2102,83 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add Document Modal */}
+      {docModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm sm:p-4"
+        >
+          <form
+            onSubmit={handleAddDocument}
+            className="w-full max-w-md rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {t('documents.addBtn')}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setDocModalOpen(false)}
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  {t('documents.descLabel')} *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={docDesc}
+                  onChange={(e) => setDocDesc(e.target.value)}
+                  placeholder="e.g. Original ID card copy"
+                  className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  {t('documents.conditionLabel')}
+                </label>
+                <input
+                  type="text"
+                  value={docCondition}
+                  onChange={(e) => setDocCondition(e.target.value)}
+                  placeholder="e.g. Good condition"
+                  className="w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  {t('documents.receivedDate')}
+                </label>
+                <DatePicker value={docReceivedDate} onChange={setDocReceivedDate} useKhmerNumerals={useKh} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDocModalOpen(false)}
+                className="min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-700 px-4 text-xs font-semibold"
+              >
+                {t('form.cancel')}
+              </button>
+              <button
+                type="submit"
+                className="min-h-[44px] rounded-xl bg-teal-600 hover:bg-teal-700 text-white px-5 text-xs font-semibold"
+              >
+                {t('form.savePlan')}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -1770,9 +2306,9 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
           role="dialog"
           aria-modal="true"
           aria-labelledby="installment-receipt-title"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm sm:p-4"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/55 backdrop-blur-sm sm:p-4 print:static print:bg-white print:backdrop-blur-none print:p-0 print:items-start print:justify-center"
         >
-          <div className="w-full max-w-sm rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+          <div className="w-full max-w-sm rounded-t-3xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4 print:border-slate-300 print:rounded-none print:bg-white print:text-slate-900">
             <div className="text-center border-b border-dashed border-slate-200 dark:border-slate-700 pb-4 space-y-1">
               {businessProfile.logo && businessProfile.logo.startsWith('data:image/') && (
                 <img
@@ -1838,7 +2374,7 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1 print:hidden">
+            <div className="grid grid-cols-3 gap-2 pt-1 print:hidden">
               <button
                 type="button"
                 onClick={() => setReceiptRecord(null)}
@@ -1848,7 +2384,16 @@ export const InstallmentsWorkspace: React.FC<InstallmentsWorkspaceProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => window.print()}
+                disabled={exportingPdf}
+                onClick={() => void handleExportReceiptPdf()}
+                className="min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-60"
+              >
+                <FileText className="w-4 h-4 text-teal-600" />
+                <span>{t('receipt.exportPdf')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleTriggerPrint}
                 className="min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold"
               >
                 <Printer className="w-4 h-4" />

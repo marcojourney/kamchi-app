@@ -370,7 +370,7 @@ const MainShell: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col lg:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 justify-between">
+      <aside className="hidden lg:flex print:hidden lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 p-4 justify-between">
         <div className="space-y-6">
           <div className="px-1 pt-1">
             <img
@@ -440,7 +440,7 @@ const MainShell: React.FC = () => {
 
       {/* Mobile Left Slide-Over Drawer */}
       <div
-        className={`lg:hidden fixed inset-0 z-50 transition-opacity duration-250 motion-reduce:transition-none ${
+        className={`lg:hidden print:hidden fixed inset-0 z-50 transition-opacity duration-250 motion-reduce:transition-none ${
           mobileDrawerOpen
             ? 'opacity-100 pointer-events-auto'
             : 'opacity-0 pointer-events-none'
@@ -541,11 +541,11 @@ const MainShell: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-h-screen">
+      <div className="flex-1 lg:pl-64 print:pl-0 flex flex-col min-h-screen">
         <OfflineIndicator />
 
         {/* Top Header (Mobile & Desktop) */}
-        <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 print:hidden h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -623,12 +623,12 @@ const MainShell: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 lg:pb-8">
-          <div className="mb-4 -mx-4 sm:-mx-6 lg:-mx-8">
+        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 lg:pb-8 print:p-0 print:max-w-none">
+          <div className="mb-4 -mx-4 sm:-mx-6 lg:-mx-8 print:hidden">
             <LicenseBanner />
           </div>
 
-          <div className="mb-4 space-y-3" aria-live="polite">
+          <div className="mb-4 space-y-3 print:hidden" aria-live="polite">
             <ExistingUserPromptBanner
               onChooseNow={() => {
                 navigateToTab('settings');
@@ -746,7 +746,7 @@ const MainShell: React.FC = () => {
         </main>
 
         {/* Mobile Bottom Tab Bar — Floating Frosted Glass Dock */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="lg:hidden print:hidden fixed bottom-0 left-0 right-0 z-40 pointer-events-none px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <nav
             aria-label="Primary"
             className="pointer-events-auto mx-auto max-w-md rounded-2xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-700/70 shadow-[0_8px_30px_rgba(15,23,42,0.10)] dark:shadow-[0_10px_34px_rgba(0,0,0,0.45)] p-1.5 grid grid-cols-5 gap-1"

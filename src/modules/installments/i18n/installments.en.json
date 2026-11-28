@@ -1,15 +1,18 @@
 {
-  "title": "Installment Sales",
+  "title": "Installment",
   "subtitle": "Manage item sales paid in scheduled weekly or monthly installments.",
   "newPlan": "New Installment",
   "importQrButton": "Import from MarketChain (QR)",
   "testQrButton": "Test QR",
+  "exportListPdf": "Export PDF",
+  "printList": "Print",
+  "exportingPdf": "Generating PDF...",
   "activeUsage": "{{count}} / {{max}} active installment plans on Free",
   "kpi": {
     "activePlans": "Active Plans",
     "outstanding": "Remaining Balance",
     "collected": "Collected",
-    "overdue": "Overdue Due"
+    "overdue": "Overdue"
   },
   "filters": {
     "searchPlaceholder": "Search item, invoice, customer, or phone...",
@@ -25,7 +28,46 @@
     "paid": "Paid",
     "partial": "Partial",
     "pending": "Upcoming",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "transferred": "Transferred",
+    "released": "Released",
+    "repossessed": "Repossessed",
+    "returned": "Returned",
+    "written_off": "Written Off"
+  },
+  "ownership": {
+    "title": "Ownership per contract",
+    "note": "Record only, not legal title. Legal terms must be reviewed by a qualified Cambodian lawyer.",
+    "lenderOwned": "Lender Owned",
+    "readyToTransfer": "Fully paid, ready to transfer",
+    "transferred": "Transferred",
+    "collateralHeld": "Collateral Held",
+    "readyToRelease": "Fully paid, ready to release",
+    "released": "Released",
+    "repossessed": "Repossessed",
+    "returned": "Returned",
+    "writtenOff": "Written Off",
+    "cancelled": "Cancelled",
+    "soldWording": "sold on installment, ownership transfers on full payment",
+    "collateralWording": "item held as collateral until repaid",
+    "confirmTransferBtn": "Confirm Transfer",
+    "confirmReleaseBtn": "Confirm Release",
+    "repossessBtn": "Repossess",
+    "returnBtn": "Return",
+    "writeOffBtn": "Write Off",
+    "clearanceLetterBtn": "Clearance / Transfer Letter",
+    "auditHistory": "Status Audit Trail"
+  },
+  "documents": {
+    "title": "Documents Held (Optional)",
+    "addBtn": "Add Document",
+    "descLabel": "Description (e.g. ID card copy, vehicle card)",
+    "conditionLabel": "Condition (e.g. Original, Good)",
+    "receivedDate": "Date Received",
+    "returnDate": "Return Date",
+    "receiptBtn": "Doc Receipt PDF",
+    "returnAction": "Mark Returned",
+    "reminder": "Reminder: Return held documents to customer as loan is fully paid."
   },
   "empty": {
     "title": "No installment plans yet",
@@ -37,6 +79,9 @@
     "createSubtitle": "Fill in sale details below or scan a MarketChain QR to auto-fill.",
     "backToList": "Back to Installments",
     "scanQrBtn": "Scan MarketChain QR",
+    "agreementTypeLabel": "Agreement / Sale Type",
+    "installmentSaleOpt": "Installment Sale (Ownership transfers on full payment)",
+    "purchaseFinancingOpt": "Purchase Financing / Collateral (Item held as collateral until repaid)",
     "customerSection": "Customer Information",
     "pickExistingCustomer": "Pick Existing Customer (Optional)",
     "searchCustomerPlaceholder": "Search customer by name, ID, or phone...",
@@ -72,7 +117,7 @@
     "downPaymentPaid": "Down Payment",
     "dueDateCol": "Due Date",
     "amountCol": "Amount",
-    "savePlan": "Create Installment Plan",
+    "savePlan": "Create Installment",
     "savingPlan": "Saving...",
     "cancel": "Cancel",
     "createdToast": "Installment plan created successfully."
@@ -91,6 +136,11 @@
     "invoice": "Invoice #{{id}}",
     "recordPayment": "Record Payment",
     "viewReceipt": "Last Receipt",
+    "exportPdf": "Export PDF",
+    "print": "Print",
+    "sellerSignature": "Seller Signature",
+    "customerSignature": "Customer Signature",
+    "documentTitle": "INSTALLMENT SCHEDULE & AGREEMENT",
     "deletePlan": "Delete Plan",
     "confirmDeleteTitle": "Delete this installment plan?",
     "confirmDeleteBody": "This permanently removes the installment plan and payment history from this device.",
@@ -128,6 +178,7 @@
     "paymentDate": "Date",
     "method": "Method",
     "remaining": "Remaining Balance",
+    "exportPdf": "Export PDF",
     "print": "Print",
     "close": "Close"
   }

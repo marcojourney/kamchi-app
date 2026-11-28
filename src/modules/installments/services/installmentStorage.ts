@@ -155,6 +155,18 @@ export async function recordInstallmentPlanPayment(
   return { plan: updatedPlan, record };
 }
 
+export async function updateInstallmentPlan(updatedPlan: InstallmentPlan): Promise<InstallmentPlan> {
+  const existing = await readAllPlans();
+  const idx = existing.findIndex((p) => p.id === updatedPlan.id);
+  if (idx === -1) {
+    throw new Error('Installment plan not found');
+  }
+  const next = [...existing];
+  next[idx] = updatedPlan;
+  await writeAllPlans(next);
+  return updatedPlan;
+}
+
 export async function deleteInstallmentPlan(planId: string): Promise<void> {
   const existing = await readAllPlans();
   const next = existing.filter((p) => p.id !== planId);

@@ -1,12 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import {
+  ArrowLeft,
+  BarChart3,
   Bell,
+  ChevronRight,
   Copy,
   FileSpreadsheet,
   FileText,
+  Layers,
   MessageSquare,
   Send,
+  ShieldCheck,
+  TrendingUp,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useApp } from '../context/AppContext';
@@ -25,6 +31,7 @@ import { ArrearsView } from './ArrearsView';
 import { useLicenseContext } from './LicenseGate';
 
 export type ReportsSubTab = 'reminders' | 'reports' | 'arrears' | 'audit';
+export type ReportDetailId = 'pnl' | 'installments' | 'arrears' | 'audit' | null;
 
 interface RemindersReportsViewProps {
   subTabRequest?: {
@@ -52,6 +59,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
   const rate = profile?.exchangeRateKhr || 4100;
 
   const [tab, setTab] = useState<ReportsSubTab>(subTabRequest?.tab || 'reminders');
+  const [selectedReportDetail, setSelectedReportDetail] = useState<ReportDetailId>(null);
   const [arrearsInitialBucket, setArrearsInitialBucket] = useState<AgingBucketKey | null>(
     subTabRequest?.bucket ?? null
   );
@@ -60,7 +68,11 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
     if (!subTabRequest) return;
     setTab(subTabRequest.tab);
     setArrearsInitialBucket(subTabRequest.bucket ?? null);
+    if (subTabRequest.tab === 'reports') {
+      setSelectedReportDetail(null);
+    }
   }, [subTabRequest?.seq]);
+
   const [pushReady, setPushReady] = useState(
     typeof Notification !== 'undefined' && Notification.permission === 'granted'
   );
@@ -223,6 +235,7 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
               type="button"
               onClick={() => {
                 if (item.id === 'arrears') setArrearsInitialBucket(null);
+                if (item.id === 'reports') setSelectedReportDetail(null);
                 setTab(item.id);
               }}
               className={`w-full min-h-[40px] px-1.5 sm:px-3 rounded-lg text-xs font-semibold text-center truncate transition-colors ${
@@ -391,9 +404,162 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
         </div>
       )}
 
-      {tab === 'reports' && (
+      {tab === 'reports' && !selectedReportDetail && (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                {lang === 'km' ? 'មជ្ឈមណ្ឌលរបាយការណ៍' : 'Report Center Hub'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {lang === 'km'
+                  ? 'ជ្រើសរើសរបាយការណ៍ខាងក្រោមដើម្បីមើលលម្អិត វិភាគ និងបោះពុម្ព។'
+                  : 'Select a report category below to view detailed analytics, breakdowns, and exports.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!canExport(licenseState)) {
+                    openUpgradePrompt('pro_export');
+                    return;
+                  }
+                  exportLoansAndPaymentsToExcel({ loans, payments, borrowers });
+                  track('feature_used', { feature: 'report_export' });
+                }}
+                className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-800 dark:text-slate-100"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>{t('reports.exportExcel')}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* P&L Report Card */}
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail('pnl')}
+              className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 text-left hover:border-teal-500 transition-all space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {t('reports.pnlTitle')} ({displayCurrency})
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {lang === 'km'
+                    ? 'ចំណូលការប្រាក់ ពិន័យ និងសុទ្ធចំណេញសរុប'
+                    : 'Interest earned, penalties collected, recoveries, and net profit.'}
+                </p>
+              </div>
+              <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-teal-600">
+                <span>{lang === 'km' ? 'មើលរបាយការណ៍' : 'View Report'}</span>
+              </div>
+            </button>
+
+            {/* Installments & Collateral Report Card */}
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail('installments')}
+              className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 text-left hover:border-teal-500 transition-all space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {lang === 'km' ? 'របាយការណ៍បង់រំលស់ និងកម្មសិទ្ធិ' : 'Installment Sales & Ownership Summary'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {lang === 'km'
+                    ? 'តាមដានស្ថានភាពកម្មសិទ្ធិយោងតាមកិច្ចសន្យា និងឯកសារកាន់កាប់'
+                    : 'Track contract ownership statuses, active installment plans, and held documents.'}
+                </p>
+              </div>
+              <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-teal-600">
+                <span>{lang === 'km' ? 'មើលរបាយការណ៍' : 'View Report'}</span>
+              </div>
+            </button>
+
+            {/* Arrears & Overdue Report Card */}
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail('arrears')}
+              className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 text-left hover:border-teal-500 transition-all space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {lang === 'km' ? 'វិភាគបំណុលយឺតយ៉ាវ និង Aging Buckets' : 'Arrears Aging & Overdue Analysis'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {lang === 'km'
+                    ? 'វិភាគកម្រិតយឺតយ៉ាវសងប្រាក់តាមកាលកំណត់'
+                    : 'Aging analysis of past-due balances, penalties accrued, and overdue schedules.'}
+                </p>
+              </div>
+              <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-teal-600">
+                <span>{lang === 'km' ? 'មើលរបាយការណ៍' : 'View Report'}</span>
+              </div>
+            </button>
+
+            {/* Audit Trail Report Card */}
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail('audit')}
+              className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 text-left hover:border-teal-500 transition-all space-y-3 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {lang === 'km' ? 'ប្រវត្តិសកម្មភាព និង Audit Trail' : 'Activity & Audit Trail Report'}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {lang === 'km'
+                    ? 'บันทึกសកម្មភាពប្រព័ន្ធ និងការកត់ត្រាគ្រប់ប្រតិបត្តិការ'
+                    : 'System activity log, actor sign-offs, and compliance audit trail.'}
+                </p>
+              </div>
+              <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-teal-600">
+                <span>{lang === 'km' ? 'មើលរបាយការណ៍' : 'View Report'}</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'reports' && selectedReportDetail === 'pnl' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail(null)}
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{lang === 'km' ? 'ត្រឡប់ទៅមជ្ឈមណ្ឌលរបាយការណ៍' : 'Back to Report Center'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -420,31 +586,14 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                 });
                 track('feature_used', { feature: 'report_export' });
               }}
-              className="min-h-[44px] flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700"
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3.5 text-xs font-semibold text-white hover:bg-teal-700"
             >
               <FileText className="w-4 h-4" />
               <span>{t('reports.exportPdf')}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (!canExport(licenseState)) {
-                  openUpgradePrompt('pro_export');
-                  return;
-                }
-                exportLoansAndPaymentsToExcel({ loans, payments, borrowers });
-                track('feature_used', { feature: 'report_export' });
-              }}
-              className="min-h-[44px] flex items-center gap-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100"
-            >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>{t('reports.exportExcel')}</span>
-            </button>
           </div>
 
-          <div
-            className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4"
-          >
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 {t('reports.pnlTitle')} ({displayCurrency})
@@ -501,6 +650,88 @@ export const RemindersReportsView: React.FC<RemindersReportsViewProps> = ({
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {tab === 'reports' && selectedReportDetail === 'installments' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail(null)}
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{lang === 'km' ? 'ត្រឡប់ទៅមជ្ឈមណ្ឌលរបាយការណ៍' : 'Back to Report Center'}</span>
+            </button>
+          </div>
+
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-4 text-center">
+            <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
+              {lang === 'km' ? 'របាយការណ៍បង់រំលស់ និងកម្មសិទ្ធិ' : 'Installment Sales & Ownership Summary'}
+            </h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              {lang === 'km'
+                ? 'ចូលទៅកាន់ផ្ទាំង "បង់រំលស់" ក្នុងម៉ឺនុយមេ ដើម្បីគ្រប់គ្រងគម្រោង បង្កើតកិច្ចសន្យា និងតាមដានកម្មសិទ្ធិយោងតាមកិច្ចសន្យាដោយផ្ទាល់។'
+                : 'Navigate to the "Installments" workspace tab in the main navigation to manage active installment plans, contracts, and ownership statuses.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === 'reports' && selectedReportDetail === 'arrears' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail(null)}
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{lang === 'km' ? 'ត្រឡប់ទៅមជ្ឈមណ្ឌលរបាយការណ៍' : 'Back to Report Center'}</span>
+            </button>
+          </div>
+          <ArrearsView
+            embedded
+            initialBucket={arrearsInitialBucket}
+            onSelectLoanForPayment={onSelectLoanForPayment}
+            onOpenLoanDetail={onOpenLoanDetail}
+          />
+        </div>
+      )}
+
+      {tab === 'reports' && selectedReportDetail === 'audit' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedReportDetail(null)}
+              className="min-h-[40px] inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{lang === 'km' ? 'ត្រឡប់ទៅមជ្ឈមណ្ឌលរបាយការណ៍' : 'Back to Report Center'}</span>
+            </button>
+          </div>
+
+          <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+            {auditLogs.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">{t('reports.auditEmpty')}</div>
+            ) : (
+              auditLogs.map((log) => (
+                <div key={log.id} className="px-4 py-3 flex items-center justify-between gap-3 text-xs">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      {log.summary}
+                    </p>
+                    <p className="text-slate-500 mt-0.5">
+                      {log.actorName} · {log.action}
+                    </p>
+                  </div>
+                  <span className="font-mono text-slate-400 shrink-0">{log.entityType}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

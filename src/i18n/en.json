@@ -132,7 +132,7 @@
     "guarantorPhone": "Guarantor Phone",
     "notes": "Notes",
     "tags": "Tags (comma separated)",
-    "riskScore": "Reliability Score",
+    "riskScore": "Score",
     "activeLoans": "Active Loans",
     "loanHistory": "Loan History",
     "paymentHistory": "Payment History",

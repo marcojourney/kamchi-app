@@ -20,7 +20,7 @@
     "deviceCodeHint": "ផ្ញើលេខកូដនេះទៅអ្នកលក់ ប្រសិនបើអ្នកចង់បានកូនសោអាជ្ញាប័ណ្ណដែលភ្ជាប់ជាមួយទូរស័ព្ទនេះ។",
     "copyCode": "ចម្លងកូដ",
     "copied": "បានចម្លង",
-    "sendTelegram": "ផ្ញើទៅអ្នកលក់តាម Telegram",
+    "sendTelegram": "ផ្ញើទៅអ្នកលក់",
     "telegramPrefill": "សួស្តី KamChi ខ្ញុំចង់ទិញគម្រោង {{plan}}។ លេខកូដឧបករណ៍របស់ខ្ញុំគឺ៖ {{deviceCode}}",
     "planSelectLabel": "គម្រោងដែលអ្នកចង់ទិញ",
     "keyInputLabel": "កូនសោអាជ្ញាប័ណ្ណ (License Key)",

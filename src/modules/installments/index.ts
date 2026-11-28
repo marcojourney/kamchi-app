@@ -4,6 +4,7 @@ export {
   SAMPLE_MARKETCHAIN_QR_PAYLOAD,
 } from './components/InstallmentsWorkspace';
 export {
+  addDocumentHeldToPlan,
   applyPaymentToInstallmentPlan,
   buildInstallmentPlan,
   computeNextDueDate,
@@ -11,6 +12,8 @@ export {
   refreshPlanSchedulesForDate,
   roundInstallmentAmount,
   tryParseMarketChainPayload,
+  updateDocumentHeldInPlan,
+  updatePlanOwnershipStatus,
 } from './services/installmentCalc';
 export {
   __setInstallmentStorageDriverForTests,
@@ -18,9 +21,19 @@ export {
   deleteInstallmentPlan,
   listInstallmentPlans,
   recordInstallmentPlanPayment,
+  updateInstallmentPlan,
 } from './services/installmentStorage';
+export {
+  exportDocumentReceiptPdf,
+  exportInstallmentClearancePdf,
+  exportInstallmentListPdf,
+  exportInstallmentPlanPdf,
+  exportInstallmentReceiptPdf,
+} from './services/installmentExport';
 export type {
+  AgreementType,
   CreateInstallmentPlanInput,
+  DocumentHeldRecord,
   InstallmentFrequency,
   InstallmentPaymentMethod,
   InstallmentPaymentRecord,
@@ -29,4 +42,6 @@ export type {
   InstallmentScheduleItem,
   InstallmentScheduleStatus,
   MarketChainParsedOrder,
+  OwnershipAuditLog,
+  OwnershipStatus,
 } from './types';
